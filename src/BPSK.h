@@ -11,6 +11,6 @@ typedef struct BPSK_parameters {
     uint16_t firCoeffsLength;
 } BPSK_parameters;
 
-void getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length, int8_t* outData, uint16_t outLength);
+void getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length, float32_t* outData, uint16_t outLength);
 
 #endif
