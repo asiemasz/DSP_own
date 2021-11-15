@@ -13,5 +13,5 @@ typedef struct BPSK_parameters {
 
 void BPSK_getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length, float32_t* outData, uint16_t outLength);
 
-void get
+void BPSK_getOutputSignal(BPSK_parameters* params, uint8_t* data, uint16_t dataLength, float32_t* outSignal, uint16_t outLength);
 #endif

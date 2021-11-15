@@ -17,7 +17,7 @@ void BPSK_getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length,
     assert(outLength == samplesPerBit * length * 8);
 
     int8_t modData[length * 8];
-    generateModData(data, length, modData);
+    BPSK_generateModData(data, length, modData);
 
     for(uint16_t i = 0; i < outLength; i = i + samplesPerBit) {
         for(uint16_t j = 0; j < samplesPerBit; j++) {
@@ -35,5 +35,21 @@ void BPSK_getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length,
         for(uint16_t i = 0; i < outLength; i++ ) {
            outData[i] = tempData[i]/maxVal;
         }
+    }
+}
+
+//generate output signal
+void BPSK_getOutputSignal(BPSK_parameters* params, uint8_t* data, uint16_t dataLength, float32_t* outSignal, uint16_t outLength) {
+    uint8_t samplesPerBit = params->Fs / params->Fb; //calculate samples per bit parameter (Fs should be multiply of Fb)
+    
+    assert(samplesPerBit > 0);
+    assert(outLength == samplesPerBit * dataLength * 8);
+
+    BPSK_getModSamples(params, data, dataLength, outSignal, outLength);
+
+    float32_t fn = (float32_t)params->Fc / params-> Fs;
+
+    for(uint16_t i = 0; i < outLength; i++) {
+        outSignal[i] = outSignal[i] * arm_sin_f32(fn*i*2*PI);
     }
 }
