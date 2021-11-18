@@ -18,8 +18,8 @@ void SRRC_getFIRCoeffs(uint8_t symbolSpan, uint8_t SPB, float32_t beta, float32_
         if(n == 0) {
             *(firCoeffs + i) = (1 / presc) * (1 - beta + 4*beta/PI);
         }
-        else if(n == SPB/4/beta || n == -SPB/4/beta) {
-            *(firCoeffs + i) = beta/presc/1.4142f * ((1 + 2/PI) * sin(PI/4/beta) + (1 - 2/PI) * cos(PI/4/beta));
+        else if(n == SPB/(4*beta) || n == -SPB/(4*beta)) {
+            *(firCoeffs + i) = beta/(presc*1.4142f) * ((1 + 2/PI) * sin(PI/(4*beta)) + (1 - 2/PI) * cos(PI/(4*beta)));
         }
         else 
             *(firCoeffs + i) = (sin(PI*n*(1 - beta)/SPB) + 4*beta*n/SPB*cos(PI*n*(1+beta)/SPB)) / (PI*n/SPB * (1 - 16*beta*beta*n*n/(SPB*SPB))) / presc;
