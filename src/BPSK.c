@@ -26,7 +26,7 @@ void BPSK_getModSamples(BPSK_parameters* params, uint8_t* data, uint16_t length,
     }
 
     if(params->firCoeffsLength) {
-        float32_t tempData[outLength + samplesPerBit * 4];
+        float32_t tempData[outLength + samplesPerBit * params->FSpan];
 
         arm_conv_f32(outData, outLength, params->firCoeffs, params->firCoeffsLength, tempData);
         float32_t maxVal;
@@ -63,14 +63,14 @@ void BPSK_demodulateSignal(BPSK_parameters* params, float32_t* signal, uint16_t 
         signal[i] = signal[i] * arm_sin_f32(fn*i*2*PI);
     }
 
-    float32_t outSignal[signalLength + samplesPerBit*4];
+    float32_t outSignal[signalLength + samplesPerBit*params->FSpan];
 
-    //arm_conv_partial_f32(signal, signalLength, params->firCoeffs, params->firCoeffsLength, outSignal, samplesPerBit * 4 , signalLength);
+    //arm_conv_partial_f32(signal, signalLength, params->firCoeffs, params->firCoeffsLength, outSignal, samplesPerBit * params->FSpan , signalLength);
     arm_conv_f32(signal, signalLength, params->firCoeffs, params->firCoeffsLength, outSignal);
 
     uint16_t k = 0;
 
-    for(uint16_t i = samplesPerBit * 4; i < signalLength + samplesPerBit*4; i = i + samplesPerBit*8) { 
+    for(uint16_t i = samplesPerBit * params->FSpan; i < signalLength + samplesPerBit*params->FSpan; i = i + samplesPerBit*8) { 
         outData[k] = 0;
         for(uint16_t j = 0; j < 8*samplesPerBit; j = j + samplesPerBit) {
             if(outSignal[i+j] < 0)
