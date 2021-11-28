@@ -13,7 +13,7 @@ void SRRC_getFIRCoeffs(uint8_t symbolSpan, uint8_t SPB, float32_t beta, float32_
     float32_t presc;
     arm_sqrt_f32(SPB, &presc);
 
-    for( uint8_t i = 0; i < length; i++) {
+    for( uint16_t i = 0; i < length; i++) {
         int16_t n = i - length/2;
         if(n == 0) {
             *(firCoeffs + i) = (1 / presc) * (1 - beta + 4*beta/PI);
