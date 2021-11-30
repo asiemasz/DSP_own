@@ -44,14 +44,17 @@ void BPSK_getOutputSignal(BPSK_parameters* params, uint8_t* data, uint16_t dataL
     uint8_t samplesPerBit = params->Fs / params->Fb; //calculate samples per bit parameter (Fs should be multiply of Fb)
     
     assert(samplesPerBit > 0);
-    assert(outLength == samplesPerBit * dataLength * 8);
+    assert(outLength == samplesPerBit * dataLength * 8 + params->prefixLength);
 
-    BPSK_getModSamples(params, data, dataLength, outSignal, outLength);
+    BPSK_getModSamples(params, data, dataLength, outSignal + params->prefixLength + 1, outLength - params->prefixLength);
 
     float32_t fn = (float32_t)params->Fc / params-> Fs;
 
-    for(uint16_t i = 0; i < outLength; i++) {
+    for(uint16_t i = params->prefixLength + 1; i < outLength; i++) {
         outSignal[i] = outSignal[i] * arm_sin_f32(fn*i*2*PI);
+    }
+    for(uint16_t i = 0; i < params->prefixLength; i++) {
+        outSignal[i] = outSignal[outLength - params->prefixLength - 1 + i];
     }
 }
 
