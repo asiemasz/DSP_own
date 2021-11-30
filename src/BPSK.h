@@ -20,6 +20,6 @@ void BPSK_getOutputSignal(BPSK_parameters* params, uint8_t* data, uint16_t dataL
 
 void BPSK_demodulateSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint8_t* outData, uint16_t outLength);
 
-void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint16_t* startIdx);
+void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint32_t* startIdx);
 
 #endif
