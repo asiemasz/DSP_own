@@ -46,15 +46,15 @@ void BPSK_getOutputSignal(BPSK_parameters* params, uint8_t* data, uint16_t dataL
     assert(samplesPerBit > 0);
     assert(outLength == samplesPerBit * dataLength * 8 + params->prefixLength);
 
-    BPSK_getModSamples(params, data, dataLength, outSignal + params->prefixLength + 1, outLength - params->prefixLength);
+    BPSK_getModSamples(params, data, dataLength, outSignal + params->prefixLength, outLength - params->prefixLength);
 
     float32_t fn = (float32_t)params->Fc / params-> Fs;
 
-    for(uint16_t i = params->prefixLength + 1; i < outLength; i++) {
+    for(uint16_t i = params->prefixLength; i < outLength; i++) {
         outSignal[i] = outSignal[i] * arm_sin_f32(fn*i*2*PI);
     }
     for(uint16_t i = 0; i < params->prefixLength; i++) {
-        outSignal[i] = outSignal[outLength - params->prefixLength - 1 + i];
+        outSignal[i] = outSignal[outLength - params->prefixLength + i];
     }
 }
 
@@ -82,3 +82,19 @@ void BPSK_demodulateSignal(BPSK_parameters* params, float32_t* signal, uint16_t 
         ++k;
     }
 }
+
+void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint16_t* startIdx) {
+    uint16_t syncDataLength = signalLength - params->prefixLength - params->frameLength;
+
+    float32_t sync[syncDataLength];
+    sync[0] = 0;
+
+    for(uint16_t i = 1; i < syncDataLength; i++) {
+        sync[i] = sync[i-1] - signal[i-1]*signal[i-1 + params->frameLength] + signal[i - 1 + params->prefixLength] * signal[i - 1 + params->prefixLength + params->frameLength];
+    }
+
+    uint16_t dumm;
+
+    arm_max_f32(sync, syncDataLength, &dumm, startIdx);
+}
+

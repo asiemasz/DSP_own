@@ -9,6 +9,7 @@ typedef struct BPSK_parameters {
     uint16_t Fb; // bit rate (bps)
     uint16_t FSpan; //filter span in symbols
     uint16_t prefixLength; //prefix length (for synchro purposes)
+    uint16_t frameLength; //one data frame length
     float32_t* firCoeffs;
     uint16_t firCoeffsLength;
 } BPSK_parameters;
