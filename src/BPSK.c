@@ -83,7 +83,7 @@ void BPSK_demodulateSignal(BPSK_parameters* params, float32_t* signal, uint16_t 
     }
 }
 
-void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint16_t* startIdx) {
+void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t signalLength, uint32_t* startIdx) {
     uint16_t syncDataLength = signalLength - params->prefixLength - params->frameLength;
 
     float32_t sync[syncDataLength];
@@ -93,8 +93,9 @@ void BPSK_syncInputSignal(BPSK_parameters* params, float32_t* signal, uint16_t s
         sync[i] = sync[i-1] - signal[i-1]*signal[i-1 + params->frameLength] + signal[i - 1 + params->prefixLength] * signal[i - 1 + params->prefixLength + params->frameLength];
     }
 
-    uint16_t dumm;
+    float32_t dumm;
 
     arm_max_f32(sync, syncDataLength, &dumm, startIdx);
+    *startIdx += params->prefixLength;
 }
 
