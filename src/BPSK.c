@@ -121,5 +121,5 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
   float32_t dumm;
 
   arm_max_f32(sync, syncDataLength, &dumm, startIdx);
-  *startIdx += params->prefixLength;
+  *startIdx += params->prefixLength + 1;
 }
