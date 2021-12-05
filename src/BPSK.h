@@ -5,7 +5,7 @@
 
 typedef struct BPSK_parameters {
     uint16_t Fc; // carrier frequency
-    uint16_t Fs; // sampling frequency
+    uint32_t Fs; // sampling frequency
     uint16_t Fb; // bit rate (bps)
     uint16_t FSpan; //filter span in symbols
     uint16_t prefixLength; //prefix length (for synchro purposes)
