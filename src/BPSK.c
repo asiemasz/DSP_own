@@ -96,7 +96,7 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
        i = i + samplesPerBit * 8) {
     outData[k] = 0;
     for (uint16_t j = 0; j < 8 * samplesPerBit; j = j + samplesPerBit) {
-      if (outSignal[i + j] > 0)
+      if (outSignal[i + j] < 0)
         outData[k] += (1 << (7 - j / samplesPerBit));
     }
     ++k;
