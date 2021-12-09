@@ -1,4 +1,7 @@
 #include "BPSK.h"
+#include "uart.h"
+
+static UART_initStruct uart2;
 
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
 static void BPSK_generateModData(uint8_t *data, uint16_t length,
@@ -104,7 +107,11 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
 }
 
 void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
-                          uint16_t signalLength, uint32_t *startIdx) {
+                          uint16_t signalLength, uint32_t *startIdx,
+                          uint16_t *foundIdx) {
+
+  *foundIdx = 0;
+
   uint16_t syncDataLength =
       signalLength - params->prefixLength - params->frameLength;
 
@@ -118,8 +125,29 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
                   signal[i - 1 + params->prefixLength + params->frameLength];
   }
 
-  float32_t dumm;
+  uint16_t idx = 0;
+  uint16_t start = 0;
 
-  arm_max_f32(sync, syncDataLength, &dumm, startIdx);
-  *startIdx += params->prefixLength + 1;
+  float32_t absMax;
+  uint16_t absMaxIdx;
+  arm_max_f32(sync, syncDataLength, &absMax, &absMaxIdx);
+
+  float32_t maxVal;
+  uint16_t maxIdx;
+
+  while (start < syncDataLength) {
+    if (start + params->frameLength < syncDataLength) {
+      arm_max_f32(sync + start, params->frameLength, &maxVal, &maxIdx);
+    } else {
+      arm_max_f32(sync + start, syncDataLength - start - 1, &maxVal, &maxIdx);
+    }
+    maxIdx += start;
+    if ((absMax - maxVal) < 0.2 * absMax) {
+      start = maxIdx + params->frameLength;
+      *(startIdx + *foundIdx) = maxIdx + params->prefixLength + 1;
+      ++(*foundIdx);
+    } else {
+      start = start + params->frameLength;
+    }
+  }
 }
