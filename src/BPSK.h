@@ -12,6 +12,7 @@ typedef struct BPSK_parameters {
   uint16_t frameLength;  // one data frame length
   float32_t *firCoeffs;
   uint16_t firCoeffsLength;
+  bool differential;
 } BPSK_parameters;
 
 void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
