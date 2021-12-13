@@ -13,6 +13,9 @@ static void BPSK_generateModData(uint8_t *data, uint16_t length,
   }
 }
 
+static void BPSK_generateDifferentialModData(uint8_t *data, uint16_t length,
+                                             int8_t *output) {}
+
 // generate modulation samples (with oversampling)
 void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
                         float32_t *outData, uint16_t outLength) {
@@ -89,15 +92,39 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
 
   uint16_t k = 0;
 
-  for (uint16_t i = samplesPerBit * params->FSpan / 2 + samplesPerBit / 2 - 1;
-       i < signalLength + samplesPerBit * params->FSpan / 2 - samplesPerBit / 2;
-       i = i + samplesPerBit * 8) {
-    outData[k] = 0;
-    for (uint16_t j = 0; j < 8 * samplesPerBit; j = j + samplesPerBit) {
-      if (outSignal[i + j] < 0)
-        outData[k] += (1 << (7 - j / samplesPerBit));
+  if (!params->differential) {
+    for (uint16_t i = samplesPerBit * params->FSpan / 2 + samplesPerBit / 2 - 1;
+         i <
+         signalLength + samplesPerBit * params->FSpan / 2 - samplesPerBit / 2;
+         i = i + samplesPerBit * 8) {
+      outData[k] = 0;
+      for (uint16_t j = 0; j < 8 * samplesPerBit; j = j + samplesPerBit) {
+        if (outSignal[i + j] < 0)
+          outData[k] += (1 << (7 - j / samplesPerBit));
+      }
+      ++k;
     }
-    ++k;
+  } else {
+    for (uint16_t i = samplesPerBit * params->FSpan / 2 + samplesPerBit / 2 - 1;
+         i <
+         signalLength + samplesPerBit * params->FSpan / 2 - samplesPerBit / 2;
+         i = i + samplesPerBit * 8) {
+      outData[k] = 0;
+      if (i == samplesPerBit * params->FSpan / 2 + samplesPerBit / 2 - 1) {
+        if (outSignal[i] < 0)
+          outData[k] += 1;
+        for (uint16_t j = samplesPerBit; j < 8 * samplesPerBit;
+             j = j + samplesPerBit) {
+          if (outSignal[i + j] * outSignal[i + j - samplesPerBit] < 0)
+            outData[k] += (1 << (7 - j / samplesPerBit));
+        }
+      } else {
+        for (uint16_t j = 0; j < 8 * samplesPerBit; j = j + samplesPerBit) {
+          if (outSignal[i + j] * outSignal[i + j - samplesPerBit] < 0)
+            outData[k] += (1 << (7 - j / samplesPerBit));
+        }
+      }
+    }
   }
 }
 
