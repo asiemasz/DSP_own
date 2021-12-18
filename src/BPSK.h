@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-
 typedef struct BPSK_parameters {
   uint16_t Fc; // carrier frequency
   uint32_t Fs; // sampling frequency
@@ -30,7 +29,11 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
                            uint16_t outLength);
 
 void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
-                          uint16_t signalLength, uint32_t *startIdx,
+                          uint16_t signalLength, uint16_t *startIdx,
                           uint16_t *foundIdx);
+
+void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
+                           uint16_t signalLength, uint16_t *startIdx,
+                           uint16_t *foundIdx);
 
 #endif

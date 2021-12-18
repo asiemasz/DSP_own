@@ -130,7 +130,7 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
 }
 
 void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
-                          uint16_t signalLength, uint32_t *startIdx,
+                          uint16_t signalLength, uint16_t *startIdx,
                           uint16_t *foundIdx) {
 
   /*uart2.baudRate = 115200;
@@ -183,7 +183,7 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
     maxIdx += start;
     if ((absMax - maxVal) < 0.2 * absMax) {
       start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx + params->prefixLength + 1;
+      *(startIdx + *foundIdx) = maxIdx + params->prefixLength;
       ++(*foundIdx);
     } else {
       start = start + params->frameLength;
@@ -204,6 +204,14 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
 void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
                            uint16_t signalLength, uint16_t *startIdx,
                            uint16_t *foundIdx) {
+  /*uart2.baudRate = 115200;
+   uart2.mode = UART_TRANSMITTER_ONLY;
+   uart2.oversampling = UART_OVERSAMPLING_BY_16;
+   uart2.parityControl = UART_PARITY_CONTROL_DISABLED;
+   uart2.stopBits = UART_STOP_BITS_1;
+   uart2.wordLength = UART_WORD_LENGTH_8;
+   uart2.uart = USART2;
+   */
   float32_t B[params->prefixLength];
   arm_fill_f32(1.0f / params->prefixLength, B, params->prefixLength);
   float32_t temp[signalLength - params->frameLength];
@@ -216,6 +224,14 @@ void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
   float32_t sync[syncDataLength];
   arm_conv_f32(temp, signalLength - params->frameLength, B,
                params->prefixLength, sync);
+
+  /* char buf[40];
+   sprintf(buf, "\r\n Sync: \r\n");
+   uart_sendString(&uart2, buf);
+   for (uint16_t i = 0; i < syncDataLength; i++) {
+     sprintf(buf, "%f \r\n", sync[i]);
+     uart_sendString(&uart2, buf);
+   }*/
 
   uint16_t idx = 0;
   uint16_t start = 0;
@@ -242,4 +258,14 @@ void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
       start = start + params->frameLength;
     }
   }
+  /* sprintf(buf, "Found %d starts \r\n", *(foundIdx));
+   uart_sendString(&uart2, buf);
+
+   for (uint16_t i = 0; i < *foundIdx; i++) {
+     sprintf(buf, "\r\n %ld \r\n", *(startIdx + i));
+     uart_sendString(&uart2, buf);
+   }
+
+   sprintf(buf, "\r\n Koniec \r\n");
+   uart_sendString(&uart2, buf);*/
 }
