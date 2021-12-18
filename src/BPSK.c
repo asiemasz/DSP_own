@@ -75,7 +75,7 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
   float32_t fn = (float32_t)params->Fc / params->Fs;
 
   for (uint16_t i = 0; i < signalLength; i++) {
-    signal[i] = signal[i] * arm_sin_f32(fn * i * 2 * PI);
+    signal[i] = signal[i] * arm_cos_f32(fn * i * 2 * PI);
   }
 
   float32_t outSignal[signalLength + params->samplesPerBit * params->FSpan];
