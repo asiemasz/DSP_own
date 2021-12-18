@@ -200,3 +200,46 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
   sprintf(buf, "\r\n Koniec \r\n");
   uart_sendString(&uart2, buf);*/
 }
+
+void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
+                           uint16_t signalLength, uint16_t *startIdx,
+                           uint16_t *foundIdx) {
+  float32_t B[params->prefixLength];
+  arm_fill_f32(1.0f / params->prefixLength, B, params->prefixLength);
+  float32_t temp[signalLength - params->frameLength];
+  for (uint16_t i = 0; i < signalLength - params->frameLength; ++i) {
+    temp[i] = signal[i] * signal[i + params->frameLength];
+  }
+  uint16_t syncDataLength =
+      signalLength - params->frameLength + params->prefixLength - 1;
+
+  float32_t sync[syncDataLength];
+  arm_conv_f32(temp, signalLength - params->frameLength, B,
+               params->prefixLength, sync);
+
+  uint16_t idx = 0;
+  uint16_t start = 0;
+
+  float32_t absMax;
+  uint16_t absMaxIdx;
+  arm_max_f32(sync, syncDataLength, &absMax, &absMaxIdx);
+
+  float32_t maxVal;
+  uint16_t maxIdx;
+
+  while (start < syncDataLength) {
+    if (start + params->frameLength < syncDataLength) {
+      arm_max_f32(sync + start, params->frameLength, &maxVal, &maxIdx);
+    } else {
+      arm_max_f32(sync + start, syncDataLength - start - 1, &maxVal, &maxIdx);
+    }
+    maxIdx += start;
+    if ((absMax - maxVal) < 0.2 * absMax) {
+      start = maxIdx + params->frameLength;
+      *(startIdx + *foundIdx) = maxIdx + params->prefixLength + 1;
+      ++(*foundIdx);
+    } else {
+      start = start + params->frameLength;
+    }
+  }
+}
