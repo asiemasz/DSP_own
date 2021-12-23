@@ -72,59 +72,42 @@ void BPSK_getOutputSignal(BPSK_parameters *params, uint8_t *data,
 void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
                            uint16_t signalLength, uint8_t *outData,
                            uint16_t outLength) {
-  float32_t fn = (float32_t)params->Fc / params->Fs;
-
-  for (uint16_t i = 0; i < signalLength; i++) {
-    signal[i] = signal[i] * arm_cos_f32(fn * i * 2 * PI);
-  }
-
-  float32_t outSignal[signalLength + params->samplesPerBit * params->FSpan];
-
-  // arm_conv_partial_f32(signal, signalLength, params->firCoeffs,
-  // params->firCoeffsLength, outSignal, params->samplesPerBit * params->FSpan ,
-  // signalLength);
-  arm_conv_f32(signal, signalLength, params->firCoeffs, params->firCoeffsLength,
-               outSignal);
 
   uint16_t k = 0;
 
   if (!params->differential) {
-    for (uint16_t i = params->samplesPerBit * params->FSpan / 2 +
-                      params->samplesPerBit / 2 - 1;
-         i < signalLength + params->samplesPerBit * params->FSpan / 2 -
-                 params->samplesPerBit / 2;
+    for (uint16_t i = params->samplesPerBit / 2;
+         i < signalLength - params->samplesPerBit / 2;
          i = i + params->samplesPerBit * 8) {
       outData[k] = 0;
       for (uint16_t j = 0; j < 8 * params->samplesPerBit;
            j = j + params->samplesPerBit) {
-        if (outSignal[i + j] < 0)
+        if (signal[i + j] < 0)
           outData[k] += (1 << (7 - j / params->samplesPerBit));
       }
       ++k;
     }
   } else {
-    for (uint16_t i = params->samplesPerBit * params->FSpan / 2 +
-                      params->samplesPerBit / 2 - 1;
-         i < signalLength + params->samplesPerBit * params->FSpan / 2 -
-                 params->samplesPerBit / 2;
+    for (uint16_t i = params->samplesPerBit / 2;
+         i < signalLength - params->samplesPerBit / 2;
          i = i + params->samplesPerBit * 8) {
       outData[k] = 0;
-      if (i == params->samplesPerBit * params->FSpan / 2 +
-                   params->samplesPerBit / 2 - 1) {
-        if (outSignal[i] < 0)
+      if (i == params->samplesPerBit / 2) {
+        if (signal[i] < 0)
           outData[k] += 1;
         for (uint16_t j = params->samplesPerBit; j < 8 * params->samplesPerBit;
              j = j + params->samplesPerBit) {
-          if (outSignal[i + j] * outSignal[i + j - params->samplesPerBit] < 0)
+          if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
             outData[k] += (1 << (7 - j / params->samplesPerBit));
         }
       } else {
         for (uint16_t j = 0; j < 8 * params->samplesPerBit;
              j = j + params->samplesPerBit) {
-          if (outSignal[i + j] * outSignal[i + j - params->samplesPerBit] < 0)
+          if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
             outData[k] += (1 << (7 - j / params->samplesPerBit));
         }
       }
+      ++k;
     }
   }
 }
@@ -183,7 +166,7 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
     maxIdx += start;
     if ((absMax - maxVal) < 0.2 * absMax) {
       start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx + params->prefixLength;
+      *(startIdx + *foundIdx) = maxIdx;
       ++(*foundIdx);
     } else {
       start = start + params->frameLength;
@@ -252,7 +235,7 @@ void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
     maxIdx += start;
     if ((absMax - maxVal) < 0.2 * absMax) {
       start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx + params->prefixLength + 1;
+      *(startIdx + *foundIdx) = maxIdx;
       ++(*foundIdx);
     } else {
       start = start + params->frameLength;
