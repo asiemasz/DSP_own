@@ -36,11 +36,11 @@ void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
     }
   }
 
-  if (params->firCoeffsLength) {
+  if (params->matchedFilterCoeffsLength) {
     float32_t tempData[outLength + params->samplesPerBit * params->FSpan];
 
-    arm_conv_f32(outData, outLength, params->firCoeffs, params->firCoeffsLength,
-                 tempData);
+    arm_conv_f32(outData, outLength, params->matchedFilterCoeffs,
+                 params->matchedFilterCoeffsLength, tempData);
     float32_t maxVal;
     void *x;
     arm_max_f32(tempData, outLength, &maxVal, x);

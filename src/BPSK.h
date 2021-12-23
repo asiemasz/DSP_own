@@ -4,7 +4,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct BPSK_parameters {
+#define COSTAS_LOOP_MAX_ERROR 0.001f;
+
+typedef struct {
+  float32_t alpha;
+  float32_t beta;
+  IIR_filter *LP_filterI;
+  IIR_filter *LP_filterQ;
+} costasLoop_parameters;
+
+typedef struct {
   uint16_t Fc; // carrier frequency
   uint32_t Fs; // sampling frequency
   uint16_t Fb; // bit rate (bps)
@@ -12,8 +21,9 @@ typedef struct BPSK_parameters {
   uint16_t FSpan;        // filter span in symbols
   uint16_t prefixLength; // prefix length (for synchro purposes)
   uint16_t frameLength;  // one data frame length
-  float32_t *firCoeffs;
-  uint16_t firCoeffsLength;
+  float32_t *matchedFilterCoeffs;
+  uint16_t matchedFilterCoeffsLength;
+  costasLoop_parameters *costas;
   bool differential;
 } BPSK_parameters;
 
@@ -35,5 +45,9 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
 void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
                            uint16_t signalLength, uint16_t *startIdx,
                            uint16_t *foundIdx);
+
+/** Costas Loop for carrier frequency and phase estimation */
+void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
+                            uint16_t signalLength);
 
 #endif
