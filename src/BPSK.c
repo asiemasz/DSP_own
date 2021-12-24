@@ -252,3 +252,40 @@ void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
    sprintf(buf, "\r\n Koniec \r\n");
    uart_sendString(&uart2, buf);*/
 }
+
+void BPSK_init(BPSK_parameters *params) {
+  params->costas->error = 0;
+  params->costas->omega = 2.0f * PI * params->Fc / params->Fs;
+  params->costas->phase = 0;
+}
+
+void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
+                            uint16_t signalLength) {
+  float32_t errorTot = 0.0f;
+  for (uint16_t i = 0; i < signalLength; ++i) {
+    float32_t si, sq, sample, sim, sqm;
+    sample = signal[i];
+    params->costas->phase += params->costas->omega;
+    params->costas->phase += params->costas->alpha * params->costas->error;
+
+    params->costas->omega += params->costas->beta * params->costas->error;
+
+    float32_t freq = params->costas->omega * params->Fs / (2 * PI);
+
+    if (params->costas->phase > 2 * PI) {
+      params->costas->phase -= 2 * PI;
+    }
+
+    si = arm_cos_f32(params->costas->phase);
+    sq = -arm_sin_f32(params->costas->phase);
+    sim = si * sample;
+    sqm = sq * sample;
+
+    sim = IIR_filter_step(params->costas->LP_filterI, sim);
+    sqm = IIR_filter_step(params->costas->LP_filterQ, sqm);
+
+    params->costas->error = sim * sqm;
+
+    errorTot += params->costas->error;
+  }
+}

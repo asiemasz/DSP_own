@@ -1,5 +1,6 @@
 #ifndef BPSK_H
 #define BPSK_H
+#include "IIR_filter.h"
 #include <arm_math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,6 +12,9 @@ typedef struct {
   float32_t beta;
   IIR_filter *LP_filterI;
   IIR_filter *LP_filterQ;
+  float32_t omega;
+  float32_t error;
+  float32_t phase;
 } costasLoop_parameters;
 
 typedef struct {
@@ -45,6 +49,8 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
 void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
                            uint16_t signalLength, uint16_t *startIdx,
                            uint16_t *foundIdx);
+
+void BPSK_init(BPSK_parameters *params);
 
 /** Costas Loop for carrier frequency and phase estimation */
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
