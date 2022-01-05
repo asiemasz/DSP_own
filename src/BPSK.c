@@ -52,6 +52,41 @@ void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
   }
 }
 
+void BPSK_setPreamble(BPSK_parameters *params, int8_t *code, uint16_t length,
+                      float32_t *preamble, uint16_t preambleLength) {
+
+  assert(preambleLength = params->samplesPerBit * length);
+
+  float32_t dataUpsampled[preambleLength];
+
+  for (uint16_t i = 0; i < preambleLength; i = i + params->samplesPerBit) {
+    for (uint16_t j = 0; j < params->samplesPerBit; j++) {
+      *(dataUpsampled + i + j) =
+          (code[i / params->samplesPerBit] > 0) ? 1.0f : -1.0f;
+    }
+  }
+
+  if (params->matchedFilterCoeffsLength) {
+    float32_t tempData[preambleLength + params->samplesPerBit * params->FSpan];
+
+    arm_conv_f32(dataUpsampled, preambleLength, params->matchedFilterCoeffs,
+                 params->matchedFilterCoeffsLength, tempData);
+
+    float32_t maxVal;
+    void *x;
+    arm_max_f32(tempData + params->samplesPerBit * params->FSpan / 2,
+                preambleLength, &maxVal, x);
+    uint32_t k = 0;
+    for (uint16_t i = params->FSpan * params->samplesPerBit / 2;
+         i < preambleLength + params->FSpan * params->samplesPerBit / 2; i++) {
+      preamble[k++] = tempData[i] / maxVal;
+    }
+  }
+
+  params->preamble = preamble;
+  params->preambleLength = preambleLength;
+}
+
 // generate output signal
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
                                     uint16_t dataLength, float32_t *outSignal,

@@ -37,6 +37,9 @@ typedef struct {
 void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
                         float32_t *outData, uint16_t outLength);
 
+void BPSK_setPreamble(BPSK_parameters *params, int8_t *code, uint16_t length,
+                      float32_t *preamble, uint16_t preambleLength);
+
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
                                     uint16_t dataLength, float32_t *outSignal,
                                     uint16_t outLength);
