@@ -1,15 +1,13 @@
 #include "IIR_filter.h"
 
 IIR_filter IIR_filter_init(float32_t *coeffs_A, uint16_t length_A,
-                           float32_t *coeffs_B, uint16_t length_B) {
+                           float32_t *coeffs_B, uint16_t length_B,
+                           float32_t *buf_A, float32_t *buf_B) {
   IIR_filter ret;
   ret.coeffs_A = coeffs_A;
   ret.coeffs_B = coeffs_B;
   ret.n_A = length_A - 1;
   ret.n_B = length_B - 1;
-
-  double buf_B[length_B - 1];
-  double buf_A[length_A - 1];
 
   ret.buf_B = buf_B;
   ret.buf_A = buf_A;

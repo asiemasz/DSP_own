@@ -18,7 +18,8 @@ typedef struct {
 } IIR_filter;
 
 IIR_filter IIR_filter_init(float32_t *coeffs_A, uint16_t length_A,
-                           float32_t *coeffs_B, uint16_t length_B);
+                           float32_t *coeffs_B, uint16_t length_B,
+                           float32_t *buf_A, float32_t *buf_B);
 
 float32_t IIR_filter_step(IIR_filter *filter, float32_t input_value);
 
