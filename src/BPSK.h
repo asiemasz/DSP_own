@@ -29,26 +29,35 @@ typedef struct {
   uint16_t matchedFilterCoeffsLength;
   costasLoop_parameters *costas;
   bool differential;
+  bool prefix;
+  float32_t *preamble;     // preamble samples
+  uint16_t preambleLength; // preamble length
 } BPSK_parameters;
 
 void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
                         float32_t *outData, uint16_t outLength);
 
-void BPSK_getOutputSignal(BPSK_parameters *params, uint8_t *data,
-                          uint16_t dataLength, float32_t *outSignal,
-                          uint16_t outLength);
+void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
+                                    uint16_t dataLength, float32_t *outSignal,
+                                    uint16_t outLength);
+
+void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params, uint8_t *data,
+                                      uint16_t dataLength, float32_t *outSignal,
+                                      uint16_t outLength);
 
 void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
                            uint16_t signalLength, uint8_t *outData,
                            uint16_t outLength);
 
-void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
-                          uint16_t signalLength, uint16_t *startIdx,
-                          uint16_t *foundIdx);
+// Symbol synchronization with cyclic prefix
+void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
+                                uint16_t signalLength, uint16_t *startIdx,
+                                uint16_t *foundIdx);
 
-void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
-                           uint16_t signalLength, uint16_t *startIdx,
-                           uint16_t *foundIdx);
+// Symbol synchronization with preamble (modulated Barker code)
+void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
+                                  uint16_t signalLength, uint16_t *startIdx,
+                                  uint16_t *foundIdx);
 
 void BPSK_init(BPSK_parameters *params);
 

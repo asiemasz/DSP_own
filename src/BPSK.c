@@ -53,9 +53,9 @@ void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
 }
 
 // generate output signal
-void BPSK_getOutputSignal(BPSK_parameters *params, uint8_t *data,
-                          uint16_t dataLength, float32_t *outSignal,
-                          uint16_t outLength) {
+void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
+                                    uint16_t dataLength, float32_t *outSignal,
+                                    uint16_t outLength) {
 
   assert(params->samplesPerBit > 0);
   assert(outLength ==
@@ -66,6 +66,22 @@ void BPSK_getOutputSignal(BPSK_parameters *params, uint8_t *data,
 
   for (uint16_t i = 0; i < params->prefixLength; i++) {
     outSignal[i] = outSignal[outLength - params->prefixLength + i];
+  }
+}
+
+void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params, uint8_t *data,
+                                      uint16_t dataLength, float32_t *outSignal,
+                                      uint16_t outLength) {
+  assert(params->samplesPerBit > 0);
+  assert(outSignal ==
+         params->samplesPerBit * dataLength * 8 + params->preambleLength);
+
+  BPSK_getModSamples(params, data, dataLength,
+                     outSignal + params->preambleLength,
+                     outLength - params->preambleLength);
+
+  for (uint16_t i = 0; i < params->preambleLength; i++) {
+    outSignal[i] = params->preamble[i];
   }
 }
 
@@ -112,18 +128,9 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
   }
 }
 
-void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
-                          uint16_t signalLength, uint16_t *startIdx,
-                          uint16_t *foundIdx) {
-
-  /*uart2.baudRate = 115200;
-  uart2.mode = UART_TRANSMITTER_ONLY;
-  uart2.oversampling = UART_OVERSAMPLING_BY_16;
-  uart2.parityControl = UART_PARITY_CONTROL_DISABLED;
-  uart2.stopBits = UART_STOP_BITS_1;
-  uart2.wordLength = UART_WORD_LENGTH_8;
-  uart2.uart = USART2;
-*/
+void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
+                                uint16_t signalLength, uint16_t *startIdx,
+                                uint16_t *foundIdx) {
   *foundIdx = 0;
 
   uint16_t syncDataLength =
@@ -139,14 +146,6 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
                   signal[i - 1 + params->prefixLength + params->frameLength];
   }
 
-  /* char buf[40];
-   sprintf(buf, "\r\n Sync: \r\n");
-   uart_sendString(&uart2, buf);
-   for (uint16_t i = 0; i < syncDataLength; i++) {
-     sprintf(buf, "%f \r\n", sync[i]);
-     uart_sendString(&uart2, buf);
-   }*/
-
   uint16_t idx = 0;
   uint16_t start = 0;
 
@@ -164,106 +163,41 @@ void BPSK_syncInputSignal(BPSK_parameters *params, float32_t *signal,
       arm_max_f32(sync + start, syncDataLength - start - 1, &maxVal, &maxIdx);
     }
     maxIdx += start;
-    if ((absMax - maxVal) < 0.2 * absMax) {
+    if ((absMax - maxVal) < 0.3 * absMax) {
       start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx;
+      *(startIdx + *foundIdx) = maxIdx + params->prefixLength;
       ++(*foundIdx);
     } else {
       start = start + params->frameLength;
     }
   }
-  /*sprintf(buf, "Found %d starts \r\n", *(foundIdx));
-  uart_sendString(&uart2, buf);
-
-  for (uint16_t i = 0; i < *foundIdx; i++) {
-    sprintf(buf, "\r\n %ld \r\n", *(startIdx + i));
-    uart_sendString(&uart2, buf);
-  }
-
-  sprintf(buf, "\r\n Koniec \r\n");
-  uart_sendString(&uart2, buf);*/
 }
 
-void BPSK_syncInputSignal_(BPSK_parameters *params, float32_t *signal,
-                           uint16_t signalLength, uint16_t *startIdx,
-                           uint16_t *foundIdx) {
-  /*uart2.baudRate = 115200;
-   uart2.mode = UART_TRANSMITTER_ONLY;
-   uart2.oversampling = UART_OVERSAMPLING_BY_16;
-   uart2.parityControl = UART_PARITY_CONTROL_DISABLED;
-   uart2.stopBits = UART_STOP_BITS_1;
-   uart2.wordLength = UART_WORD_LENGTH_8;
-   uart2.uart = USART2;
-   */
-  float32_t B[params->prefixLength];
-  arm_fill_f32(1.0f / params->prefixLength, B, params->prefixLength);
-  float32_t temp[signalLength - params->frameLength];
-  for (uint16_t i = 0; i < signalLength - params->frameLength; ++i) {
-    temp[i] = signal[i] * signal[i + params->frameLength];
-  }
-  uint16_t syncDataLength =
-      signalLength - params->frameLength + params->prefixLength - 1;
+void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
+                                  uint16_t signalLength, uint16_t *startIdx,
+                                  uint16_t *foundIdx) {
+  *foundIdx = 0;
 
-  float32_t sync[syncDataLength];
-  arm_conv_f32(temp, signalLength - params->frameLength, B,
-               params->prefixLength, sync);
+  float32_t corr[2 * signalLength - 1];
+  arm_correlate_f32(signal, signalLength, params->preamble,
+                    params->preambleLength, corr);
 
-  /* char buf[40];
-   sprintf(buf, "\r\n Sync: \r\n");
-   uart_sendString(&uart2, buf);
-   for (uint16_t i = 0; i < syncDataLength; i++) {
-     sprintf(buf, "%f \r\n", sync[i]);
-     uart_sendString(&uart2, buf);
-   }*/
-
-  uint16_t idx = 0;
-  uint16_t start = 0;
-
-  float32_t absMax;
-  uint16_t absMaxIdx;
-  arm_max_f32(sync, syncDataLength, &absMax, &absMaxIdx);
-
-  float32_t maxVal;
-  uint16_t maxIdx;
-
-  while (start < syncDataLength) {
-    if (start + params->frameLength < syncDataLength) {
-      arm_max_f32(sync + start, params->frameLength, &maxVal, &maxIdx);
-    } else {
-      arm_max_f32(sync + start, syncDataLength - start - 1, &maxVal, &maxIdx);
-    }
-    maxIdx += start;
-    if ((absMax - maxVal) < 0.2 * absMax) {
-      start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx;
-      ++(*foundIdx);
-    } else {
-      start = start + params->frameLength;
-    }
-  }
-  /* sprintf(buf, "Found %d starts \r\n", *(foundIdx));
-   uart_sendString(&uart2, buf);
-
-   for (uint16_t i = 0; i < *foundIdx; i++) {
-     sprintf(buf, "\r\n %ld \r\n", *(startIdx + i));
-     uart_sendString(&uart2, buf);
-   }
-
-   sprintf(buf, "\r\n Koniec \r\n");
-   uart_sendString(&uart2, buf);*/
+  // TODO: Find indexes
 }
 
 void BPSK_init(BPSK_parameters *params) {
-  params->costas->error = 0;
+  // Initialize costas loop
+  params->costas->error = 0.0f;
   params->costas->omega = 2.0f * PI * params->Fc / params->Fs;
-  params->costas->phase = 0;
+  params->costas->phase = 0.0f;
 }
 
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
                             uint16_t signalLength) {
   float32_t errorTot = 0.0f;
+  float32_t si, sq, sample, sim, sqm;
+
   for (uint16_t i = 0; i < signalLength; ++i) {
-    float32_t si, sq, sample, sim, sqm;
     sample = signal[i];
     params->costas->phase += params->costas->omega;
     params->costas->phase += params->costas->alpha * params->costas->error;
@@ -281,6 +215,8 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
     sim = si * sample;
     sqm = sq * sample;
 
+    signal[i] = signal[i] * si;
+
     sim = IIR_filter_step(params->costas->LP_filterI, sim);
     sqm = IIR_filter_step(params->costas->LP_filterQ, sqm);
 
@@ -288,4 +224,5 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
 
     errorTot += params->costas->error;
   }
+  // TODO: Checking if locked?
 }
