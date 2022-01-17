@@ -1,8 +1,6 @@
 #include "BPSK.h"
 #include "uart.h"
 
-static UART_initStruct uart2;
-
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
 static void BPSK_generateModData(uint8_t *data, uint16_t length,
                                  int8_t *output) {
@@ -218,6 +216,20 @@ void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
                     params->preambleLength, corr);
 
   // TODO: Find indexes
+  uint16_t i = signalLength;
+  while (i < 2 * signalLength - 1) {
+    float32_t maxVal, meanVal;
+    uint16_t idx;
+    arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
+    arm_mean_f32(corr + i, params->frameLength, &meanVal);
+    if (maxVal > 2 * meanVal) {
+      *(startIdx + *foundIdx) = i - signalLength + idx + params->preambleLength;
+      ++(*foundIdx);
+      i = i + idx + params->preambleLength + params->frameLength;
+    } else {
+      i += params->frameLength;
+    }
+  }
 }
 
 void BPSK_init(BPSK_parameters *params) {
@@ -230,10 +242,9 @@ void BPSK_init(BPSK_parameters *params) {
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
                             uint16_t signalLength) {
   float32_t errorTot = 0.0f;
-  float32_t si, sq, sample, sim, sqm;
+  float32_t si, sq, sim, sqm;
 
   for (uint16_t i = 0; i < signalLength; ++i) {
-    sample = signal[i];
     params->costas->phase += params->costas->omega;
     params->costas->phase += params->costas->alpha * params->costas->error;
 
@@ -247,8 +258,9 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
 
     si = arm_cos_f32(params->costas->phase);
     sq = -arm_sin_f32(params->costas->phase);
-    sim = si * sample;
-    sqm = sq * sample;
+
+    sim = si * signal[i];
+    sqm = sq * signal[i];
 
     signal[i] = signal[i] * si;
 
@@ -259,5 +271,6 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
 
     errorTot += params->costas->error;
   }
+
   // TODO: Checking if locked?
 }
