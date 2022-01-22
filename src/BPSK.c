@@ -213,6 +213,32 @@ void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
   }
 }
 
+void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
+                            uint16_t signalLength, uint16_t *startIdx,
+                            uint16_t *foundIdx) {
+  float32_t corr[2 * signalLength - 1];
+  arm_correlate_f32(signal, signalLength, params->preamble,
+                    params->preambleLength, corr);
+  uint16_t i = signalLength;
+
+  float32_t absMaxVal;
+  uint8_t dumm;
+  arm_max_f32(corr + i, signalLength, &absMaxVal, &dumm);
+
+  while (i < 2 * signalLength - 1 - params->frameLength) {
+    float32_t maxVal, meanVal;
+    uint16_t idx;
+    arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
+    if (maxVal > 0.8 * absMaxVal) {
+      *(startIdx + *foundIdx) = i - signalLength + idx + params->preambleLength;
+      ++(*foundIdx);
+      i = i + idx + params->preambleLength / 2 + params->frameLength;
+    } else {
+      i += params->frameLength;
+    }
+  }
+}
+
 void BPSK_init(BPSK_parameters *params) {
   // Initialize costas loop
   params->costas->error = 0.0f;

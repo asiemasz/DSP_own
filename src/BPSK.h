@@ -62,6 +62,10 @@ void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
                                   uint16_t signalLength, uint16_t *startIdx,
                                   uint16_t *foundIdx);
 
+void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
+                            uint16_t signalLength, uint16_t *startIdx,
+                            uint16_t *foundIdx);
+
 void BPSK_init(BPSK_parameters *params);
 
 /** Costas Loop for carrier frequency and phase estimation */
