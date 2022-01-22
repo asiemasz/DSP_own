@@ -242,12 +242,12 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
     sim = si * signal[i];
     sqm = sq * signal[i];
 
-    signal[i] = signal[i] * si;
-
     sim = IIR_filter_step(params->costas->LP_filterI, sim);
     sqm = IIR_filter_step(params->costas->LP_filterQ, sqm);
 
     params->costas->error = sim * sqm;
+
+    signal[i] = sim;
 
     errorTot += params->costas->error;
   }
