@@ -216,6 +216,7 @@ void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
 void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
                             uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx) {
+  bool locked = false; // If any symbol detected
   float32_t corr[2 * signalLength - 1];
   arm_correlate_f32(signal, signalLength, params->preamble,
                     params->preambleLength, corr);
@@ -225,16 +226,34 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
   uint8_t dumm;
   arm_max_f32(corr + i, signalLength, &absMaxVal, &dumm);
 
+  float32_t maxVal, meanVal;
+  uint16_t idx;
+
   while (i < 2 * signalLength - 1 - params->frameLength) {
-    float32_t maxVal, meanVal;
-    uint16_t idx;
-    arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
-    if (maxVal > 0.8 * absMaxVal) {
-      *(startIdx + *foundIdx) = i - signalLength + idx + params->preambleLength;
-      ++(*foundIdx);
-      i = i + idx + params->preambleLength / 2 + params->frameLength;
+    if (!locked) {
+      arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
+      if (maxVal > 0.8 * absMaxVal) {
+        *(startIdx + *foundIdx) =
+            i - signalLength + idx + params->preambleLength;
+        ++(*foundIdx);
+        i += idx + params->preambleLength + params->frameLength;
+        locked = true;
+      } else {
+        i += params->frameLength;
+      }
     } else {
-      i += params->frameLength;
+      arm_max_f32(corr + i - params->samplesPerBit, 2 * params->samplesPerBit,
+                  &maxVal, &idx);
+      if (maxVal > 0.8 * absMaxVal) {
+        *(startIdx + *foundIdx) = i - signalLength - params->samplesPerBit +
+                                  idx + params->preambleLength;
+        i += idx - params->samplesPerBit + params->preambleLength +
+             params->frameLength;
+        ++(*foundIdx);
+      } else {
+        locked = false;
+        i += params->samplesPerBit;
+      }
     }
   }
 }
