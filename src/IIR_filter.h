@@ -8,7 +8,7 @@ www.inventec.ch/chdh) for C ARM */
 
 typedef struct {
   float32_t *coeffs_A; // Applied to output values
-  float32_t *coeffs_B; // Aplied to input values
+  float32_t *coeffs_B; // Applied to input values
   uint16_t n_A;        // Output signal delay line length
   uint16_t n_B;        // Input signal delay line length
   float32_t *buf_B;    // Input signal delay line
