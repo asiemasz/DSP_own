@@ -34,42 +34,44 @@ typedef struct {
   uint16_t preambleLength; // preamble length
 } BPSK_parameters;
 
-void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
-                        float32_t *outData, uint16_t outLength);
+void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
+                        const uint16_t length, float32_t *outData,
+                        const uint16_t outLength);
 
-void BPSK_setPreamble(BPSK_parameters *params, int16_t *code, uint16_t length,
-                      float32_t *preamble, uint16_t preambleLength);
+void BPSK_setPreamble(BPSK_parameters *params, const int16_t *code,
+                      const uint16_t length, float32_t *preamble,
+                      const uint16_t preambleLength);
 
-void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
-                                    uint16_t dataLength, float32_t *outSignal,
-                                    uint16_t outLength);
+void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
+                                    const uint8_t *data,
+                                    const uint16_t dataLength,
+                                    float32_t *outSignal,
+                                    const uint16_t outLength);
 
-void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params, uint8_t *data,
-                                      uint16_t dataLength, float32_t *outSignal,
-                                      uint16_t outLength);
+void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
+                                      const uint8_t *data,
+                                      const uint16_t dataLength,
+                                      float32_t *outSignal,
+                                      const uint16_t outLength);
 
-void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
-                           uint16_t signalLength, uint8_t *outData,
-                           uint16_t outLength);
+void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
+                           const uint16_t signalLength, uint8_t *outData,
+                           const uint16_t outLength);
 
 // Symbol synchronization with cyclic prefix
-void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
-                                uint16_t signalLength, uint16_t *startIdx,
+void BPSK_syncInputSignalPrefix(BPSK_parameters *params,
+                                const float32_t *signal,
+                                const uint16_t signalLength, uint16_t *startIdx,
                                 uint16_t *foundIdx);
 
-// Symbol synchronization with preamble (modulated Barker code)
-void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
-                                  uint16_t signalLength, uint16_t *startIdx,
-                                  uint16_t *foundIdx);
-
-void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
-                            uint16_t signalLength, uint16_t *startIdx,
+void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
+                            const uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx);
 
 void BPSK_init(BPSK_parameters *params);
 
 /** Costas Loop for carrier frequency and phase estimation */
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
-                            uint16_t signalLength);
+                            const uint16_t signalLength);
 
 #endif

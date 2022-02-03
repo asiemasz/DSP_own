@@ -2,7 +2,7 @@
 #include "uart.h"
 
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
-static void BPSK_generateModData(uint8_t *data, uint16_t length,
+static void BPSK_generateModData(const uint8_t *data, const uint16_t length,
                                  int8_t *output) {
   for (uint16_t i = 0; i < length; i++) {
     for (uint8_t j = 0; j < 8; j++) {
@@ -11,12 +11,14 @@ static void BPSK_generateModData(uint8_t *data, uint16_t length,
   }
 }
 
-static void BPSK_generateDifferentialModData(uint8_t *data, uint16_t length,
+static void BPSK_generateDifferentialModData(const uint8_t *data,
+                                             const uint16_t length,
                                              int8_t *output) {}
 
 // generate modulation samples (with oversampling)
-void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
-                        float32_t *outData, uint16_t outLength) {
+void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
+                        const uint16_t length, float32_t *outData,
+                        const uint16_t outLength) {
 
   assert(params->samplesPerBit > 0);
   assert(outLength == params->samplesPerBit * length * 8);
@@ -50,10 +52,11 @@ void BPSK_getModSamples(BPSK_parameters *params, uint8_t *data, uint16_t length,
   }
 }
 
-void BPSK_setPreamble(BPSK_parameters *params, int16_t *code, uint16_t length,
-                      float32_t *preamble, uint16_t preambleLength) {
+void BPSK_setPreamble(BPSK_parameters *params, const int16_t *code,
+                      const uint16_t length, float32_t *preamble,
+                      const uint16_t preambleLength) {
 
-  assert(preambleLength = params->samplesPerBit * length);
+  assert(preambleLength == params->samplesPerBit * length);
 
   for (uint16_t i = 0; i < preambleLength; i = i + params->samplesPerBit) {
     for (uint16_t j = 0; j < params->samplesPerBit; j++) {
@@ -67,9 +70,11 @@ void BPSK_setPreamble(BPSK_parameters *params, int16_t *code, uint16_t length,
 }
 
 // generate output signal
-void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
-                                    uint16_t dataLength, float32_t *outSignal,
-                                    uint16_t outLength) {
+void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
+                                    const uint8_t *data,
+                                    const uint16_t dataLength,
+                                    float32_t *outSignal,
+                                    const uint16_t outLength) {
 
   assert(params->samplesPerBit > 0);
   assert(outLength ==
@@ -83,9 +88,11 @@ void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params, uint8_t *data,
   }
 }
 
-void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params, uint8_t *data,
-                                      uint16_t dataLength, float32_t *outSignal,
-                                      uint16_t outLength) {
+void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
+                                      const uint8_t *data,
+                                      const uint16_t dataLength,
+                                      float32_t *outSignal,
+                                      const uint16_t outLength) {
   assert(params->samplesPerBit > 0);
   assert(outSignal ==
          params->samplesPerBit * dataLength * 8 + params->preambleLength);
@@ -99,8 +106,8 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params, uint8_t *data,
   }
 }
 
-void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
-                           uint16_t signalLength, uint8_t *outData,
+void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
+                           const uint16_t signalLength, uint8_t *outData,
                            uint16_t outLength) {
 
   uint16_t k = 0;
@@ -142,8 +149,9 @@ void BPSK_demodulateSignal(BPSK_parameters *params, float32_t *signal,
   }
 }
 
-void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
-                                uint16_t signalLength, uint16_t *startIdx,
+void BPSK_syncInputSignalPrefix(BPSK_parameters *params,
+                                const float32_t *signal,
+                                const uint16_t signalLength, uint16_t *startIdx,
                                 uint16_t *foundIdx) {
   *foundIdx = 0;
 
@@ -160,7 +168,6 @@ void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
                   signal[i - 1 + params->prefixLength + params->frameLength];
   }
 
-  uint16_t idx = 0;
   uint16_t start = 0;
 
   float32_t absMax;
@@ -187,34 +194,8 @@ void BPSK_syncInputSignalPrefix(BPSK_parameters *params, float32_t *signal,
   }
 }
 
-void BPSK_syncInputSignalPreamble(BPSK_parameters *params, float32_t *signal,
-                                  uint16_t signalLength, uint16_t *startIdx,
-                                  uint16_t *foundIdx) {
-  *foundIdx = 0;
-
-  float32_t corr[2 * signalLength - 1];
-  arm_correlate_f32(signal, signalLength, params->preamble,
-                    params->preambleLength, corr);
-
-  // TODO: Find indexes
-  uint16_t i = signalLength;
-  while (i < 2 * signalLength - 1) {
-    float32_t maxVal, meanVal;
-    uint16_t idx;
-    arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
-    arm_mean_f32(corr + i, params->frameLength, &meanVal);
-    if (maxVal > 2 * meanVal) {
-      *(startIdx + *foundIdx) = i - signalLength + idx + params->preambleLength;
-      ++(*foundIdx);
-      i = i + idx + params->preambleLength + params->frameLength;
-    } else {
-      i += params->frameLength;
-    }
-  }
-}
-
-void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
-                            uint16_t signalLength, uint16_t *startIdx,
+void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
+                            const uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx) {
   bool locked = false; // If any symbol detected
   float32_t corr[2 * signalLength - 1];
@@ -226,25 +207,26 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, float32_t *signal,
   uint8_t dumm;
   arm_max_f32(corr + i, signalLength, &absMaxVal, &dumm);
 
-  float32_t maxVal, meanVal;
+  float32_t maxVal;
   uint16_t idx;
 
   while (i < 2 * signalLength - 1 - params->frameLength) {
     if (!locked) {
-      arm_max_f32(corr + i, params->frameLength, &maxVal, &idx);
-      if (maxVal > 0.8 * absMaxVal) {
+      arm_max_f32(corr + i, params->frameLength + params->preambleLength,
+                  &maxVal, &idx);
+      if (maxVal > 0.7 * absMaxVal) {
         *(startIdx + *foundIdx) =
             i - signalLength + idx + params->preambleLength;
         ++(*foundIdx);
         i += idx + params->preambleLength + params->frameLength;
         locked = true;
       } else {
-        i += params->frameLength;
+        i += params->frameLength + params->preambleLength;
       }
     } else {
       arm_max_f32(corr + i - params->samplesPerBit, 2 * params->samplesPerBit,
                   &maxVal, &idx);
-      if (maxVal > 0.8 * absMaxVal) {
+      if (maxVal > 0.7 * absMaxVal) {
         *(startIdx + *foundIdx) = i - signalLength - params->samplesPerBit +
                                   idx + params->preambleLength;
         i += idx - params->samplesPerBit + params->preambleLength +
@@ -266,7 +248,7 @@ void BPSK_init(BPSK_parameters *params) {
 }
 
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
-                            uint16_t signalLength) {
+                            const uint16_t signalLength) {
   float32_t errorTot = 0.0f;
   float32_t si, sq, sim, sqm;
   for (uint16_t i = 0; i < signalLength; ++i) {
