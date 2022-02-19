@@ -18,6 +18,13 @@ typedef struct {
 } costasLoop_parameters;
 
 typedef struct {
+  float32_t loop_gain;
+  uint8_t max_error;
+  float32_t error;
+  uint16_t curr_idx;
+} gardnerTimingRecovery_parameters;
+
+typedef struct {
   uint16_t Fc; // carrier frequency
   uint32_t Fs; // sampling frequency
   uint16_t Fb; // bit rate (bps)
@@ -28,6 +35,7 @@ typedef struct {
   float32_t *matchedFilterCoeffs;
   uint16_t matchedFilterCoeffsLength;
   costasLoop_parameters *costas;
+  gardnerTimingRecovery_parameters *gardner;
   bool differential;
   bool prefix;
   float32_t *preamble;     // preamble samples
@@ -73,5 +81,9 @@ void BPSK_init(BPSK_parameters *params);
 /** Costas Loop for carrier frequency and phase estimation */
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
                             const uint16_t signalLength);
+
+void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
+                         const uint16_t signalLength, int8_t *output,
+                         const uint16_t outputLength);
 
 #endif

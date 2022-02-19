@@ -245,6 +245,8 @@ void BPSK_init(BPSK_parameters *params) {
   params->costas->error = 0.0f;
   params->costas->omega = 2.0f * PI * params->Fc / params->Fs;
   params->costas->phase = 0.0f;
+  params->gardner->error = 0.0f;
+  params->gardner->curr_idx = 0;
 }
 
 void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
@@ -280,4 +282,37 @@ void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
   }
 
   // TODO: Checking if locked?
+}
+
+void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
+                         const uint16_t signalLength, int8_t *output,
+                         const uint16_t outputLength) {
+  uint16_t idx = params->gardner->curr_idx;
+  uint16_t si = 0;
+  uint16_t left_idx, right_idx, mid_idx;
+
+  float32_t gain = params->gardner->loop_gain;
+
+  uint16_t spb = params->samplesPerBit;
+  uint16_t half_spb = spb / 2;
+  uint16_t quart_spb = spb / 4;
+
+  while (idx < signalLength) {
+    right_idx = idx + half_spb * 3;
+    left_idx = idx + half_spb;
+    mid_idx = idx + spb;
+    *(output + si++) = *(signal + left_idx) > 0 ? -1 : 1;
+    float32_t error =
+        (*(signal + left_idx) - *(signal + right_idx)) * *(signal + mid_idx);
+
+    if (error > params->gardner->max_error)
+      error = params->gardner->max_error;
+    else if (error < -params->gardner->max_error)
+      error = -params->gardner->max_error;
+
+    uint8_t correction_offset = half_spb * error * gain;
+    idx += spb + correction_offset;
+  }
+
+  params->gardner->curr_idx = idx % signalLength;
 }
