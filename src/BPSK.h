@@ -66,7 +66,9 @@ void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
                                       uint16_t *startIdx, uint16_t *foundIdx);
 
 void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
-                            const uint16_t signalLength, uint16_t *startIdx,
+                            const uint16_t signalLength,
+                            const float32_t *preamble,
+                            const uint16_t preambleLength, uint16_t *startIdx,
                             uint16_t *foundIdx);
 
 void BPSK_init(BPSK_parameters *params);

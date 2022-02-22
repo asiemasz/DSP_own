@@ -77,15 +77,17 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
                                       float32_t *outSignal,
                                       const uint16_t outLength) {
   assert(params->samplesPerBit > 0);
-  assert(outSignal ==
-         params->samplesPerBit * dataLength * 8 + params->preambleLength);
+  assert(outSignal == params->samplesPerBit * dataLength * 8 +
+                          params->preambleCodeLength * params->samplesPerBit);
 
-  BPSK_getModSamples(params, data, dataLength,
-                     outSignal + params->preambleLength,
-                     outLength - params->preambleLength);
+  BPSK_getModSamples(
+      params, data, dataLength,
+      outSignal + params->preambleCodeLength * params->samplesPerBit,
+      outLength - params->preambleCodeLength * params->samplesPerBit);
 
-  for (uint16_t i = 0; i < params->preambleLength; i++) {
-    outSignal[i] = params->preamble[i];
+  for (uint16_t i = 0; i < params->preambleCodeLength * params->samplesPerBit;
+       i++) {
+    outSignal[i] = params->preambleCode[i / params->samplesPerBit];
   }
 }
 
@@ -214,12 +216,13 @@ void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
 }
 
 void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
-                            const uint16_t signalLength, uint16_t *startIdx,
+                            const uint16_t signalLength,
+                            const float32_t *preamble,
+                            const uint16_t preambleLength, uint16_t *startIdx,
                             uint16_t *foundIdx) {
   bool locked = false; // If any symbol detected
   float32_t corr[2 * signalLength - 1];
-  arm_correlate_f32(signal, signalLength, params->preamble,
-                    params->preambleLength, corr);
+  arm_correlate_f32(signal, signalLength, preamble, preambleLength, corr);
   uint16_t i = signalLength;
 
   float32_t absMaxVal;
@@ -231,25 +234,23 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
 
   while (i < 2 * signalLength - 1 - params->frameLength) {
     if (!locked) {
-      arm_max_f32(corr + i, params->frameLength + params->preambleLength,
-                  &maxVal, &idx);
-      if (maxVal > 0.7 * absMaxVal) {
-        *(startIdx + *foundIdx) =
-            i - signalLength + idx + params->preambleLength;
+      arm_max_f32(corr + i, params->frameLength + preambleLength, &maxVal,
+                  &idx);
+      if (maxVal > 0.6 * absMaxVal) {
+        *(startIdx + *foundIdx) = i - signalLength + idx + preambleLength;
         ++(*foundIdx);
-        i += idx + params->preambleLength + params->frameLength;
+        i += idx + preambleLength + params->frameLength;
         locked = true;
       } else {
-        i += params->frameLength + params->preambleLength;
+        i += params->frameLength + preambleLength;
       }
     } else {
       arm_max_f32(corr + i - params->samplesPerBit, 2 * params->samplesPerBit,
                   &maxVal, &idx);
-      if (maxVal > 0.7 * absMaxVal) {
-        *(startIdx + *foundIdx) = i - signalLength - params->samplesPerBit +
-                                  idx + params->preambleLength;
-        i += idx - params->samplesPerBit + params->preambleLength +
-             params->frameLength;
+      if (maxVal > 0.6 * absMaxVal) {
+        *(startIdx + *foundIdx) =
+            i - signalLength - params->samplesPerBit + idx + preambleLength;
+        i += idx - params->samplesPerBit + preambleLength + params->frameLength;
         ++(*foundIdx);
       } else {
         locked = false;
