@@ -260,7 +260,7 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
   }
 }
 
-void BPSK_init(BPSK_parameters *params) {
+void BPSK_reset(BPSK_parameters *params) {
   // Initialize costas loop
   params->costas->error = 0.0f;
   params->costas->omega = 2.0f * PI * params->Fc / params->Fs;
