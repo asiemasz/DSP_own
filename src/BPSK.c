@@ -52,23 +52,6 @@ void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
   }
 }
 
-void BPSK_setPreamble(BPSK_parameters *params, const int16_t *code,
-                      const uint16_t length, float32_t *preamble,
-                      const uint16_t preambleLength) {
-
-  assert(preambleLength == params->samplesPerBit * length);
-
-  for (uint16_t i = 0; i < preambleLength; i = i + params->samplesPerBit) {
-    for (uint16_t j = 0; j < params->samplesPerBit; j++) {
-      *(preamble + i + j) =
-          (code[i / params->samplesPerBit] > 0) ? 1.0f : -1.0f;
-    }
-  }
-
-  params->preamble = preamble;
-  params->preambleLength = preambleLength;
-}
-
 // generate output signal
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
                                     const uint8_t *data,

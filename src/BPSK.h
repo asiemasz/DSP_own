@@ -37,8 +37,6 @@ typedef struct {
   gardnerTimingRecovery_parameters *gardner;
   bool differential;
   bool prefix;
-  float32_t *preamble;     // preamble samples
-  uint16_t preambleLength; // preamble length
   int8_t *preambleCode;
   uint16_t preambleCodeLength;
 } BPSK_parameters;
@@ -46,10 +44,6 @@ typedef struct {
 void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
                         const uint16_t length, float32_t *outData,
                         const uint16_t outLength);
-
-void BPSK_setPreamble(BPSK_parameters *params, const int16_t *code,
-                      const uint16_t length, float32_t *preamble,
-                      const uint16_t preambleLength);
 
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
                                     const uint8_t *data,
