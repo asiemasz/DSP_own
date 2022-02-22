@@ -149,48 +149,84 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
   }
 }
 
-void BPSK_syncInputSignalPrefix(BPSK_parameters *params,
-                                const float32_t *signal,
-                                const uint16_t signalLength, uint16_t *startIdx,
-                                uint16_t *foundIdx) {
-  *foundIdx = 0;
+void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
+                                      const uint16_t signalLength,
+                                      uint16_t *startIdx, uint16_t *foundIdx) {
+  uint16_t corrLength = signalLength > params->preambleCodeLength
+                            ? (2 * signalLength - 1)
+                            : (2 * params->preambleCodeLength - 1);
 
-  uint16_t syncDataLength =
-      signalLength - params->prefixLength - params->frameLength;
+  int8_t corr[corrLength];
+  xcorrelate_int8(signal, signalLength, params->preambleCode,
+                  params->preambleCodeLength, corr, corrLength);
 
-  float32_t sync[syncDataLength];
-  sync[0] = 0;
+  uint16_t plusMax[signalLength / 13 * 2]; // TODO: It shouldn't be hardcoded
+  uint16_t minusMax[signalLength / 13 * 2];
+  uint16_t plusCount = 0;
+  uint16_t minusCount = 0;
 
-  for (uint16_t i = 1; i < syncDataLength; i++) {
-    sync[i] = sync[i - 1] -
-              signal[i - 1] * signal[i - 1 + params->frameLength] +
-              signal[i - 1 + params->prefixLength] *
-                  signal[i - 1 + params->prefixLength + params->frameLength];
+  for (uint16_t i = signalLength + 1; i < corrLength; ++i) {
+    if (corr[i] == params->preambleCodeLength) {
+      plusMax[plusCount++] = i - signalLength;
+    } else if (corr[i] == -params->preambleCodeLength) {
+      minusMax[minusCount++] = i - signalLength;
+    }
   }
 
-  uint16_t start = 0;
-
-  float32_t absMax;
-  uint16_t absMaxIdx;
-  arm_max_f32(sync, syncDataLength, &absMax, &absMaxIdx);
-
-  float32_t maxVal;
-  uint16_t maxIdx;
-
-  while (start < syncDataLength) {
-    if (start + params->frameLength < syncDataLength) {
-      arm_max_f32(sync + start, params->frameLength, &maxVal, &maxIdx);
-    } else {
-      arm_max_f32(sync + start, syncDataLength - start - 1, &maxVal, &maxIdx);
+  uint16_t *maximas;
+  uint16_t maximasCount;
+  if (minusCount > plusCount) {
+    for (uint16_t i = 0; i < signalLength; i++) {
+      *(signal + i) = -(*(signal + i));
     }
-    maxIdx += start;
-    if ((absMax - maxVal) < 0.3 * absMax) {
-      start = maxIdx + params->frameLength;
-      *(startIdx + *foundIdx) = maxIdx + params->prefixLength;
-      ++(*foundIdx);
-    } else {
-      start = start + params->frameLength;
+    maximas = minusMax;
+    maximasCount = minusCount;
+  } else {
+    maximas = plusMax;
+    maximasCount = plusCount;
+  }
+
+  uint16_t prevStart, nextStart;
+  prevStart = maximas[0];
+  if (prevStart >= 13) {
+    *(startIdx) = prevStart + params->preambleCodeLength - 13;
+    *(foundIdx) = *(foundIdx) + 1;
+  }
+
+  for (uint16_t i = 1; i < maximasCount; i++) {
+    nextStart = *(maximas + i);
+    uint16_t distance = nextStart - prevStart;
+    if (distance == 13) {
+      *(startIdx + (*foundIdx)) = prevStart + params->preambleCodeLength;
+      *foundIdx = *foundIdx + 1;
+      prevStart = nextStart;
+    } else if (distance >= 13 - 2 && distance <= 13 + 2) {
+      *(startIdx + (*foundIdx)) = nextStart - 13 + params->preambleCodeLength;
+      prevStart = nextStart;
+      *foundIdx = *foundIdx + 1;
+    } else if (distance > 13 + 2 && (distance % 13) <= 3) {
+      prevStart = nextStart;
+      uint8_t num = distance / 13U;
+      if (num == 1) {
+        *(startIdx + *foundIdx) = prevStart + params->preambleCodeLength;
+        *foundIdx = *foundIdx + 1;
+      }
+      while (num) {
+        *(startIdx + (*foundIdx) + --num) =
+            nextStart - 13 + params->preambleCodeLength;
+        nextStart -= 13;
+      }
+      *(foundIdx) = *(foundIdx) + num;
     }
+  }
+  nextStart = maximas[maximasCount - 1];
+
+  if (nextStart - (*(startIdx + *foundIdx - 1) - params->preambleCodeLength) >=
+          13 - 2 &&
+      nextStart - (*(startIdx + *foundIdx - 1) - params->preambleCodeLength) <=
+          13 + 2) {
+    *(startIdx + *foundIdx) = nextStart + params->preambleCodeLength;
+    *foundIdx = *foundIdx + 1;
   }
 }
 

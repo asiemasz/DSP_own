@@ -1,11 +1,10 @@
 #ifndef BPSK_H
 #define BPSK_H
 #include "IIR_filter.h"
+#include "xcorr.h"
 #include <arm_math.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-#define COSTAS_LOOP_MAX_ERROR 0.001f;
 
 typedef struct {
   float32_t alpha;
@@ -40,6 +39,8 @@ typedef struct {
   bool prefix;
   float32_t *preamble;     // preamble samples
   uint16_t preambleLength; // preamble length
+  int8_t *preambleCode;
+  uint16_t preambleCodeLength;
 } BPSK_parameters;
 
 void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
@@ -66,11 +67,9 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
                            const uint16_t signalLength, uint8_t *outData,
                            const uint16_t outLength);
 
-// Symbol synchronization with cyclic prefix
-void BPSK_syncInputSignalPrefix(BPSK_parameters *params,
-                                const float32_t *signal,
-                                const uint16_t signalLength, uint16_t *startIdx,
-                                uint16_t *foundIdx);
+void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
+                                      const uint16_t signalLength,
+                                      uint16_t *startIdx, uint16_t *foundIdx);
 
 void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
                             const uint16_t signalLength, uint16_t *startIdx,
