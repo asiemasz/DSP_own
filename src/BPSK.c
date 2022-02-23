@@ -91,6 +91,25 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
   }
 }
 
+void BPSK_demodulateSignal_decimated(BPSK_parameters *params,
+                                     const int8_t *signal,
+                                     const uint16_t signalLength,
+                                     const uint16_t *startIdx,
+                                     const uint16_t startNum, uint8_t *outData,
+                                     const uint16_t outLength) {
+  assert(startNum <= outLength);
+
+  for (uint16_t i = 0; i < startNum; ++i) {
+    *(outData + i) = 0;
+    if ((*startIdx + i) > signalLength - params->frameLength)
+      break;
+    for (uint16_t j = 1; j <= params->frameLength; ++j) {
+      uint8_t sym = *(signal + *(startIdx + i) + j) > 0 ? 0 : 1;
+      *(outData + i) += sym << (params->frameLength - j);
+    }
+  }
+}
+
 void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
                            const uint16_t signalLength, uint8_t *outData,
                            uint16_t outLength) {
