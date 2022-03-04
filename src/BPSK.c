@@ -191,46 +191,58 @@ void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
   }
 
   uint16_t prevStart, nextStart;
-  prevStart = maximas[0];
-  if (prevStart >= 13) {
-    *(startIdx) = prevStart + params->preambleCodeLength - 13;
-    *(foundIdx) = *(foundIdx) + 1;
+  prevStart = *(maximas);
+  nextStart = prevStart;
+  if (prevStart >= 13U - params->preambleCodeLength) {
+    uint16_t num = prevStart / 13U;
+    if (num == 0)
+      ++num;
+    while (num) {
+      nextStart -= 13U;
+      *(startIdx + *foundIdx + num - 1U) =
+          nextStart + params->preambleCodeLength;
+      --num;
+    }
+    *(foundIdx) = *(foundIdx) + prevStart / 13U;
   }
 
   for (uint16_t i = 1; i < maximasCount; i++) {
     nextStart = *(maximas + i);
     uint16_t distance = nextStart - prevStart;
-    if (distance == 13) {
+    if (distance == 13U) {
       *(startIdx + (*foundIdx)) = prevStart + params->preambleCodeLength;
-      *foundIdx = *foundIdx + 1;
+      *foundIdx = *foundIdx + 1U;
       prevStart = nextStart;
-    } else if (distance >= 13 - 2 && distance <= 13 + 2) {
-      *(startIdx + (*foundIdx)) = nextStart - 13 + params->preambleCodeLength;
+    } else if (distance >= 13U - 2U && distance <= 13U + 2U) {
+      *(startIdx + (*foundIdx)) = nextStart - 13U + params->preambleCodeLength;
       prevStart = nextStart;
-      *foundIdx = *foundIdx + 1;
-    } else if (distance > 13 + 2 && (distance % 13) <= 3) {
+      *foundIdx = *foundIdx + 1U;
+    } else if (distance > 13U + 2U &&
+               ((distance % 13U) <= 1U || (distance % 13U) >= 12U)) {
       prevStart = nextStart;
-      uint8_t num = distance / 13U;
-      if (num == 1) {
-        *(startIdx + *foundIdx) = prevStart + params->preambleCodeLength;
-        *foundIdx = *foundIdx + 1;
-      }
+      uint16_t num = distance / 13U;
       while (num) {
-        *(startIdx + (*foundIdx) + --num) =
-            nextStart - 13 + params->preambleCodeLength;
-        nextStart -= 13;
+        nextStart -= 13U;
+        *(startIdx + *foundIdx + num - 1U) =
+            nextStart + params->preambleCodeLength;
+        --num;
       }
-      *(foundIdx) = *(foundIdx) + num;
+      *(foundIdx) = *(foundIdx) + distance / 13U;
+    } else {
+      uint16_t distance = *(maximas + i + 1) - nextStart;
+      if (distance % 13 <= 1U || distance % 13 >= 12U) {
+        prevStart = nextStart;
+      }
     }
   }
-  nextStart = maximas[maximasCount - 1];
+  nextStart = *(maximas + maximasCount - 1U);
 
-  if (nextStart - (*(startIdx + *foundIdx - 1) - params->preambleCodeLength) >=
-          13 - 2 &&
-      nextStart - (*(startIdx + *foundIdx - 1) - params->preambleCodeLength) <=
-          13 + 2) {
+  if ((nextStart - (*(startIdx + *foundIdx - 1U) -
+                    params->preambleCodeLength)) >= (13U - 2U) &&
+      (nextStart - (*(startIdx + *foundIdx - 1U) -
+                    params->preambleCodeLength)) <= (13U + 2U)) {
     *(startIdx + *foundIdx) = nextStart + params->preambleCodeLength;
-    *foundIdx = *foundIdx + 1;
+    *foundIdx = *foundIdx + 1U;
   }
 }
 
@@ -288,8 +300,8 @@ void BPSK_reset(BPSK_parameters *params) {
   params->gardner->curr_idx = 0;
 }
 
-void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
-                            const uint16_t signalLength) {
+void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
+                          const uint16_t signalLength) {
   float32_t errorTot = 0.0f;
   float32_t si, sq, sim, sqm;
   for (uint16_t i = 0; i < signalLength; ++i) {

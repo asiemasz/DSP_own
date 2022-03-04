@@ -81,8 +81,8 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
 void BPSK_reset(BPSK_parameters *params);
 
 /** Costas Loop for carrier frequency and phase estimation */
-void BPSK_syncSignalCarrier(BPSK_parameters *params, float32_t *signal,
-                            const uint16_t signalLength);
+void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
+                          const uint16_t signalLength);
 
 void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
                          const uint16_t signalLength, int8_t *output,
