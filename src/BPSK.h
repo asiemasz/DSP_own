@@ -28,15 +28,12 @@ typedef struct {
   uint32_t Fs; // sampling frequency
   uint16_t Fb; // bit rate (bps)
   uint16_t samplesPerBit;
-  uint16_t FSpan;        // filter span in symbols
-  uint16_t prefixLength; // prefix length (for synchro purposes)
-  uint16_t frameLength;  // one data frame length
+  uint16_t FSpan;       // matched filter span in symbols
+  uint16_t frameLength; // one byte frame length
   float32_t *matchedFilterCoeffs;
   uint16_t matchedFilterCoeffsLength;
   costasLoop_parameters *costas;
   gardnerTimingRecovery_parameters *gardner;
-  bool differential;
-  bool prefix;
   int8_t *preambleCode;
   uint16_t preambleCodeLength;
 } BPSK_parameters;
