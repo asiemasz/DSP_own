@@ -25,15 +25,10 @@ void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
 
   int8_t modData[length * 8];
 
-  if (params->differential)
-    BPSK_generateDifferentialModData(data, length, modData);
-  else
-    BPSK_generateModData(data, length, modData);
+  BPSK_generateModData(data, length, modData);
 
-  for (uint16_t i = 0; i < outLength; i = i + params->samplesPerBit) {
-    for (uint16_t j = 0; j < params->samplesPerBit; j++) {
-      *(outData + i + j) = modData[i / params->samplesPerBit];
-    }
+  for (uint16_t i = 0; i < outLength; i += params->samplesPerBit) {
+    *(outData + i) = modData[i];
   }
 
   if (params->matchedFilterCoeffsLength) {
