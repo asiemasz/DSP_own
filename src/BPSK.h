@@ -45,6 +45,7 @@ void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
                                     const uint8_t *data,
                                     const uint16_t dataLength,
+                                    const uint16_t prefixLength,
                                     float32_t *outSignal,
                                     const uint16_t outLength);
 

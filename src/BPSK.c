@@ -11,10 +11,6 @@ static void BPSK_generateModData(const uint8_t *data, const uint16_t length,
   }
 }
 
-static void BPSK_generateDifferentialModData(const uint8_t *data,
-                                             const uint16_t length,
-                                             int8_t *output) {}
-
 // generate modulation samples (with oversampling)
 void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
                         const uint16_t length, float32_t *outData,
@@ -51,18 +47,18 @@ void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
 void BPSK_getOutputSignalWithPrefix(BPSK_parameters *params,
                                     const uint8_t *data,
                                     const uint16_t dataLength,
+                                    const uint16_t prefixLength,
                                     float32_t *outSignal,
                                     const uint16_t outLength) {
 
   assert(params->samplesPerBit > 0);
-  assert(outLength ==
-         params->samplesPerBit * dataLength * 8 + params->prefixLength);
+  assert(outLength == params->samplesPerBit * dataLength * 8 + prefixLength);
 
-  BPSK_getModSamples(params, data, dataLength, outSignal + params->prefixLength,
-                     outLength - params->prefixLength);
+  BPSK_getModSamples(params, data, dataLength, outSignal + prefixLength,
+                     outLength - prefixLength);
 
-  for (uint16_t i = 0; i < params->prefixLength; i++) {
-    outSignal[i] = outSignal[outLength - params->prefixLength + i];
+  for (uint16_t i = 0; i < prefixLength; i++) {
+    outSignal[i] = outSignal[outLength - prefixLength + i];
   }
 }
 
@@ -72,17 +68,36 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
                                       float32_t *outSignal,
                                       const uint16_t outLength) {
   assert(params->samplesPerBit > 0);
-  assert(outSignal == params->samplesPerBit * dataLength * 8 +
-                          params->preambleCodeLength * params->samplesPerBit);
+  assert(outLength ==
+         params->samplesPerBit * (dataLength * 8 + params->preambleCodeLength));
 
-  BPSK_getModSamples(
-      params, data, dataLength,
-      outSignal + params->preambleCodeLength * params->samplesPerBit,
-      outLength - params->preambleCodeLength * params->samplesPerBit);
+  int8_t modData[dataLength * 8];
 
-  for (uint16_t i = 0; i < params->preambleCodeLength * params->samplesPerBit;
-       i++) {
-    outSignal[i] = params->preambleCode[i / params->samplesPerBit];
+  BPSK_generateModData(data, dataLength, modData);
+
+  uint16_t i;
+  for (i = 0; i < params->preambleCodeLength * params->samplesPerBit;
+       i += params->samplesPerBit) {
+    *(outSignal + i) = params->preambleCode[i];
+  }
+
+  for (; i < outLength; i += params->samplesPerBit) {
+    *(outSignal + i) = modData[i - params->preambleCodeLength];
+  }
+
+  if (params->matchedFilterCoeffsLength) {
+    float32_t tempData[outLength + params->samplesPerBit * params->FSpan];
+
+    arm_conv_f32(outSignal, outLength, params->matchedFilterCoeffs,
+                 params->matchedFilterCoeffsLength, tempData);
+    float32_t maxVal;
+    void *x;
+    arm_max_f32(tempData, outLength, &maxVal, x);
+    uint32_t k = 0;
+    for (uint16_t i = params->FSpan * params->samplesPerBit / 2;
+         i < outLength + params->FSpan * params->samplesPerBit / 2; i++) {
+      outSignal[k++] = tempData[i] / maxVal;
+    }
   }
 }
 
@@ -111,40 +126,26 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
 
   uint16_t k = 0;
 
-  if (!params->differential) {
-    for (uint16_t i = params->samplesPerBit / 2;
-         i < signalLength - params->samplesPerBit / 2;
-         i = i + params->samplesPerBit * 8) {
-      outData[k] = 0;
-      for (uint16_t j = 0; j < 8 * params->samplesPerBit;
+  for (uint16_t i = params->samplesPerBit / 2;
+       i < signalLength - params->samplesPerBit / 2;
+       i = i + params->samplesPerBit * 8) {
+    outData[k] = 0;
+    if (i == params->samplesPerBit / 2) {
+      if (signal[i] < 0)
+        outData[k] += 1;
+      for (uint16_t j = params->samplesPerBit; j < 8 * params->samplesPerBit;
            j = j + params->samplesPerBit) {
-        if (signal[i + j] < 0)
+        if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
           outData[k] += (1 << (7 - j / params->samplesPerBit));
       }
-      ++k;
-    }
-  } else {
-    for (uint16_t i = params->samplesPerBit / 2;
-         i < signalLength - params->samplesPerBit / 2;
-         i = i + params->samplesPerBit * 8) {
-      outData[k] = 0;
-      if (i == params->samplesPerBit / 2) {
-        if (signal[i] < 0)
-          outData[k] += 1;
-        for (uint16_t j = params->samplesPerBit; j < 8 * params->samplesPerBit;
-             j = j + params->samplesPerBit) {
-          if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
-            outData[k] += (1 << (7 - j / params->samplesPerBit));
-        }
-      } else {
-        for (uint16_t j = 0; j < 8 * params->samplesPerBit;
-             j = j + params->samplesPerBit) {
-          if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
-            outData[k] += (1 << (7 - j / params->samplesPerBit));
-        }
+    } else {
+      for (uint16_t j = 0; j < 8 * params->samplesPerBit;
+           j = j + params->samplesPerBit) {
+        if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
+          outData[k] += (1 << (7 - j / params->samplesPerBit));
       }
-      ++k;
     }
+    ++k;
   }
 }
 
