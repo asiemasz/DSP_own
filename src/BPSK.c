@@ -76,13 +76,15 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
   BPSK_generateModData(data, dataLength, modData);
 
   uint16_t i;
+  uint16_t k = 0;
   for (i = 0; i < params->preambleCodeLength * params->samplesPerBit;
        i += params->samplesPerBit) {
-    *(outSignal + i) = params->preambleCode[i];
+    *(outSignal + i) = (float32_t)params->preambleCode[k++];
   }
 
+  k = 0;
   for (; i < outLength; i += params->samplesPerBit) {
-    *(outSignal + i) = modData[i - params->preambleCodeLength];
+    *(outSignal + i) = (float32_t)modData[k++];
   }
 
   if (params->matchedFilterCoeffsLength) {
