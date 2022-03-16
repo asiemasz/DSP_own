@@ -1,6 +1,7 @@
 #include "BPSK.h"
 #include "uart.h"
 
+#define MICROSECONDS 1000000.0f
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
 static void BPSK_generateModData(const uint8_t *data, const uint16_t length,
                                  int8_t *output) {
@@ -300,34 +301,46 @@ void BPSK_reset(BPSK_parameters *params) {
 
 void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
                           const uint16_t signalLength) {
-  float32_t errorTot = 0.0f;
-  float32_t si, sq, sim, sqm;
-  for (uint16_t i = 0; i < signalLength; ++i) {
-    params->costas->phase += params->costas->omega;
-    params->costas->phase += params->costas->alpha * params->costas->error;
+  float32_t REF_PERIOD = MICROSECONDS / (float32_t)params->Fc;
+  float32_t SAMPLE_PERIOD = MICROSECONDS / (float32_t)params->Fs;
+
+  float32_t a = params->costas->alpha;
+  float32_t b = params->costas->beta;
+  float32_t intgralf = 1.2f * a / REF_PERIOD;
+  float32_t I, Q, S;
+  float32_t S_I, S_Q;
+  float32_t error;
+  float32_t locked, all;
 
     params->costas->omega += params->costas->beta * params->costas->error;
 
-    float32_t freq = params->costas->omega * params->Fs / (2 * PI);
+  for (uint16_t i = 0; i < signalLength; i++) {
+    S = *(signal + i);
 
-    if (params->costas->phase > 2 * PI) {
-      params->costas->phase -= 2 * PI;
-    }
+    params->costas->f += SAMPLE_PERIOD * 2 * M_PI / params->costas->period;
 
-    si = arm_cos_f32(params->costas->phase);
-    sq = -arm_sin_f32(params->costas->phase);
+    if (params->costas->f > 2 * M_PI)
+      params->costas->f -= 2 * M_PI;
 
-    sim = si * signal[i];
-    sqm = sq * signal[i];
+    I = arm_cos_f32(params->costas->f + params->costas->phase);
+    Q = -arm_sin_f32(params->costas->f + params->costas->phase);
 
-    sim = IIR_filter_step(params->costas->LP_filterI, sim);
-    sqm = IIR_filter_step(params->costas->LP_filterQ, sqm);
+    S_I = FIR_filter_step(params->costas->LP_filterI, S * I);
+    S_Q = FIR_filter_step(params->costas->LP_filterQ, S * Q);
 
-    params->costas->error = sim * sqm;
+    error = (S_I > 0.0f) ? S_Q : -S_Q;
+    *(signal + i) = S_I;
+    params->costas->error_int += error * SAMPLE_PERIOD;
+    error += params->costas->error_int * intgralf;
 
-    signal[i] = sim;
+    params->costas->phase += a * error;
+    params->costas->period -= b * error;
 
-    errorTot += params->costas->error;
+    params->costas->lock = (S_I * S_I) - (S_Q * S_Q);
+    params->costas->ask = (S_I * S_I) + (S_Q * S_Q);
+    ++all;
+    if (params->costas->lock > 0.011f)
+      ++locked;
   }
 
   // TODO: Checking if locked?

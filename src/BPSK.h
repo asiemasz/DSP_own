@@ -1,5 +1,6 @@
 #ifndef BPSK_H
 #define BPSK_H
+#include "FIR_filter.h"
 #include "IIR_filter.h"
 #include "xcorr.h"
 #include <arm_math.h>
@@ -9,11 +10,14 @@
 typedef struct {
   float32_t alpha;
   float32_t beta;
-  IIR_filter *LP_filterI;
-  IIR_filter *LP_filterQ;
-  float32_t omega;
-  float32_t error;
+  FIR_filter *LP_filterI;
+  FIR_filter *LP_filterQ;
   float32_t phase;
+  float32_t period;
+  float32_t f;
+  float32_t error_int;
+  float32_t lock;
+  float32_t ask;
 } costasLoop_parameters;
 
 typedef struct {
