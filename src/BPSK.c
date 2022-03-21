@@ -96,8 +96,8 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
     float32_t maxVal;
     void *x;
     arm_max_f32(tempData, outLength, &maxVal, x);
-    uint32_t k = 0;
-    for (uint16_t i = params->FSpan * params->samplesPerBit / 2;
+    k = 0;
+    for (i = params->FSpan * params->samplesPerBit / 2;
          i < outLength + params->FSpan * params->samplesPerBit / 2; i++) {
       outSignal[k++] = tempData[i] / maxVal;
     }
@@ -228,8 +228,8 @@ void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
       }
       *(foundIdx) = *(foundIdx) + distance / 13U;
     } else {
-      uint16_t distance = *(maximas + i + 1) - nextStart;
-      if (distance % 13 <= 1U || distance % 13 >= 12U) {
+      uint16_t distance_ = *(maximas + i + 1) - nextStart;
+      if (distance_ % 13 <= 1U || distance_ % 13 >= 12U) {
         prevStart = nextStart;
       }
     }
