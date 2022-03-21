@@ -3,10 +3,10 @@
 
 #define MICROSECONDS 1000000.0f
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
-static void BPSK_generateModData(const uint8_t *data, const uint16_t length,
-                                 int8_t *output) {
+void BPSK_generateModData(const uint8_t *data, const uint16_t length,
+                          int8_t *output) {
   for (uint16_t i = 0; i < length; i++) {
-    for (uint8_t j = 0; j < 8; j++) {
+    for (uint8_t j = 0; j < 8U; j++) {
       *(output + i * 8 + j) = (data[i] & (0x80 >> j)) ? -1 : 1;
     }
   }
