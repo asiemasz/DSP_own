@@ -14,6 +14,8 @@ typedef struct {
 FIR_filter FIR_filter_init(float32_t *coeffs, uint16_t coeffs_length,
                            float32_t *buf);
 
+FIR_filter FIR_filter_reset(FIR_filter *filter);
+
 float32_t FIR_filter_step(FIR_filter *filter, float32_t input_value);
 
 float32_t FIR_filter_run(FIR_filter *filter, float32_t *input,

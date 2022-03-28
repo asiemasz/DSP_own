@@ -292,10 +292,16 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
 
 void BPSK_reset(BPSK_parameters *params) {
   // Initialize costas loop
-  params->costas->error = 0.0f;
-  params->costas->omega = 2.0f * PI * params->Fc / params->Fs;
-  params->costas->phase = 0.0f;
-  params->gardner->error = 0.0f;
+  params->costas->error_int = 0.0f;
+  params->costas->lock = 0.0f;
+  params->costas->ask = 0.0f;
+  params->costas->period = 1000000.0f / (float32_t)params->Fc;
+  params->costas->f = -(MICROSECONDS / (float32_t)params->Fs) * 2.0f * M_PI /
+                      (MICROSECONDS / (float32_t)params->Fc);
+  params->costas->phase = 0;
+  FIR_filter_reset(params->costas->LP_filterI);
+  FIR_filter_reset(params->costas->LP_filterQ);
+
   params->gardner->curr_idx = 0;
 }
 
