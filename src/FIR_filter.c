@@ -40,4 +40,6 @@ float32_t FIR_filter_run(FIR_filter *filter, float32_t *input,
   for (uint16_t i = 0; i < input_length; i++) {
     output[i] = FIR_filter_step(filter, input[i]);
   }
+
+  return output[input_length];
 }
