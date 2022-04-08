@@ -310,8 +310,8 @@ void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t REF_PERIOD = MICROSECONDS / (float32_t)params->Fc;
   float32_t SAMPLE_PERIOD = MICROSECONDS / (float32_t)params->Fs;
 
-  float32_t a = params->costas->Kp;
-  float32_t b = params->costas->Ki;
+  float32_t a = params->costas->alpha;
+  float32_t b = params->costas->beta;
   float32_t intgralf = 1.2f * a / REF_PERIOD;
   float32_t I, Q, S;
   float32_t S_I, S_Q;

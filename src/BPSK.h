@@ -8,8 +8,8 @@
 #include <stdint.h>
 
 typedef struct {
-  float32_t Kp;
-  float32_t Ki;
+  float32_t alpha;
+  float32_t beta;
   FIR_filter *LP_filterI;
   FIR_filter *LP_filterQ;
   float32_t phase;
