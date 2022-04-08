@@ -349,7 +349,17 @@ void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
       ++locked;
   }
 
-  // TODO: Checking if locked?
+static float32_t interpolateLinear(float32_t *signal, uint16_t m_k,
+                                   float32_t mu) {
+  if (mu < 0) {
+    m_k--;
+    mu = mu + 1.0f;
+  } else if (mu >= 1) {
+    m_k++;
+    mu = mu - 1.0f;
+  }
+
+  return mu * signal[m_k + 1] + (1 - mu) * signal[m_k];
 }
 
 void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
