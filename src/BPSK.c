@@ -355,32 +355,69 @@ void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
 void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
                          const uint16_t signalLength, int8_t *output,
                          const uint16_t outputLength) {
-  uint16_t idx = params->gardner->curr_idx;
-  uint16_t si = 0;
-  uint16_t left_idx, right_idx, mid_idx;
+  uint16_t midpoint_offset = params->samplesPerBit / 2;
+  float32_t Ki = params->gardner->Ki;
+  float32_t Kp = params->gardner->Kp;
 
-  float32_t gain = params->gardner->loop_gain;
+  uint16_t symbols_num = signalLength / params->samplesPerBit + 1;
+  uint16_t start_idx = 0;
 
-  uint16_t spb = params->samplesPerBit;
-  uint16_t half_spb = spb / 2;
-  uint16_t quart_spb = spb / 4;
-
-  while (idx < signalLength) {
-    right_idx = idx + half_spb * 3;
-    left_idx = idx + half_spb;
-    mid_idx = idx + spb;
-    *(output + si++) = *(signal + left_idx) > 0 ? -1 : 1;
-    float32_t error =
-        (*(signal + left_idx) - *(signal + right_idx)) * *(signal + mid_idx);
-
-    if (error > params->gardner->max_error)
-      error = params->gardner->max_error;
-    else if (error < -params->gardner->max_error)
-      error = -params->gardner->max_error;
-
-    uint8_t correction_offset = half_spb * error * gain;
-    idx += spb + correction_offset;
+  float32_t min_val, max_val;
+  uint16_t min_idx, max_idx;
+  arm_min_f32(signal, params->samplesPerBit, &min_val, &min_idx);
+  arm_max_f32(signal, params->samplesPerBit, &max_val, &max_idx);
+  if (min_val < 0) {
+    start_idx = min_idx;
+  } else {
+    start_idx = max_idx;
   }
 
-  params->gardner->curr_idx = idx % signalLength;
+  uint8_t strobe = 0;
+  uint16_t k = 0;         // current symbol index
+  uint16_t m_k = 0;       //
+  float32_t mu = 0;       // fractional symbol timing offset estimate
+  float32_t v_p, v_i;     // proportional and integral output
+  float32_t v = 0.0f;     // PI output
+  float32_t error = 0.0f; // Error from TED
+  float32_t cnt = 1.0f;   // modulo - 1 counter
+  float32_t W;
+
+  uint16_t zc_idx;
+  float32_t zc_mu;
+  float32_t sample_zc;
+  float32_t sample;
+
+  float32_t last_sample = signal[start_idx];
+  for (uint16_t i = start_idx; i < signalLength; i++) {
+    if (strobe) {
+      sample = interpolateLinear(signal, m_k, mu);
+      zc_idx = m_k - midpoint_offset;
+      zc_mu = mu;
+      sample_zc = interpolateLinear(signal, zc_idx, zc_mu);
+      error = sample_zc * (last_sample - sample);
+      last_sample = sample;
+      output[k] = sample > 0 ? 1 : -1;
+    } else {
+      error = 0.0f;
+    }
+
+    v_p = Kp * error;
+    v_i += (Ki * error);
+    v = v_p + v_i;
+
+    W = 1.0f / params->samplesPerBit + v;
+    strobe = cnt < W;
+    if (strobe) {
+      k++;
+      m_k = i;
+      mu = cnt / W;
+    }
+
+    cnt = cnt - W;
+    if (cnt > 0) {
+      cnt = cnt - (float32_t)((int16_t)cnt);
+    } else {
+      cnt = 1.0f + cnt - (float32_t)((int16_t)cnt);
+    }
+  }
 }

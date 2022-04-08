@@ -21,7 +21,8 @@ typedef struct {
 } costasLoop_parameters;
 
 typedef struct {
-  float32_t loop_gain;
+  float32_t Kp;
+  float32_t Ki;
   uint8_t max_error;
   float32_t error;
   uint16_t curr_idx;
