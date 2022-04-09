@@ -365,62 +365,48 @@ static float32_t interpolateLinear(float32_t *signal, uint16_t m_k,
 void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
                          const uint16_t signalLength, int8_t *output,
                          const uint16_t outputLength) {
-  uint16_t midpoint_offset = params->samplesPerBit / 2;
+  gardnerTimingRecovery_parameters *gardner = params->gardner;
   float32_t Ki = params->gardner->Ki;
   float32_t Kp = params->gardner->Kp;
+  uint16_t midpoint_offset = params->samplesPerBit / 2;
 
+  float32_t sps_invert = 1.0f / params->samplesPerBit;
   uint16_t symbols_num = signalLength / params->samplesPerBit + 1;
-  uint16_t start_idx = 0;
 
-  float32_t min_val, max_val;
-  uint16_t min_idx, max_idx;
-  arm_min_f32(signal, params->samplesPerBit, &min_val, &min_idx);
-  arm_max_f32(signal, params->samplesPerBit, &max_val, &max_idx);
-  if (min_val < 0) {
-    start_idx = min_idx;
-  } else {
-    start_idx = max_idx;
-  }
+  assert(outputLength == symbols_num);
 
+  uint16_t k = 0; // current symbol index
+  uint16_t m_k = 0;
+  float32_t v;     // PI output
+  float32_t error; // Error from TED
+  float32_t W = 0.0f;
   uint8_t strobe = 0;
-  uint16_t k = 0;         // current symbol index
-  uint16_t m_k = 0;       //
-  float32_t mu = 0;       // fractional symbol timing offset estimate
-  float32_t v_p, v_i;     // proportional and integral output
-  float32_t v = 0.0f;     // PI output
-  float32_t error = 0.0f; // Error from TED
-  float32_t cnt = 1.0f;   // modulo - 1 counter
-  float32_t W;
-
+  float32_t cnt = 1.0f;
   uint16_t zc_idx;
-  float32_t zc_mu;
   float32_t sample_zc;
   float32_t sample;
 
-  float32_t last_sample = signal[start_idx];
-  for (uint16_t i = start_idx; i < signalLength; i++) {
+  for (uint16_t i = m_k; i < signalLength; i++) {
     if (strobe) {
-      sample = interpolateLinear(signal, m_k, mu);
+      sample = interpolateLinear(signal, m_k, gardner->mu);
       zc_idx = m_k - midpoint_offset;
-      zc_mu = mu;
-      sample_zc = interpolateLinear(signal, zc_idx, zc_mu);
-      error = sample_zc * (last_sample - sample);
-      last_sample = sample;
+      sample_zc = interpolateLinear(signal, zc_idx, gardner->mu);
+      error = sample_zc * (gardner->last_sample - sample);
+      gardner->last_sample = sample;
       output[k] = sample > 0 ? 1 : -1;
     } else {
       error = 0.0f;
     }
 
-    v_p = Kp * error;
-    v_i += (Ki * error);
-    v = v_p + v_i;
+    gardner->v_i += (Ki * error);
+    v = Kp * error + gardner->v_i;
 
-    W = 1.0f / params->samplesPerBit + v;
+    W = sps_invert + v;
     strobe = cnt < W;
     if (strobe) {
       k++;
       m_k = i;
-      mu = cnt / W;
+      gardner->mu = cnt / W;
     }
 
     cnt = cnt - W;
