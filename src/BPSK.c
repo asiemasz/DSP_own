@@ -305,8 +305,8 @@ void BPSK_reset(BPSK_parameters *params) {
   params->gardner->curr_idx = 0;
 }
 
-void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
-                          const uint16_t signalLength) {
+float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
+                           const uint16_t signalLength) {
   float32_t REF_PERIOD = MICROSECONDS / (float32_t)params->Fc;
   float32_t SAMPLE_PERIOD = MICROSECONDS / (float32_t)params->Fs;
 
@@ -316,10 +316,9 @@ void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t I, Q, S;
   float32_t S_I, S_Q;
   float32_t error;
-  float32_t locked, all;
-
-    params->costas->omega += params->costas->beta * params->costas->error;
-
+  float32_t lock, ask;
+  float32_t locked = 0;
+  float32_t all = 0;
   for (uint16_t i = 0; i < signalLength; i++) {
     S = *(signal + i);
 
@@ -342,12 +341,14 @@ void BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
     params->costas->phase += a * error;
     params->costas->period -= b * error;
 
-    params->costas->lock = (S_I * S_I) - (S_Q * S_Q);
-    params->costas->ask = (S_I * S_I) + (S_Q * S_Q);
+    lock = (S_I * S_I) - (S_Q * S_Q);
+    ask = (S_I * S_I) + (S_Q * S_Q);
     ++all;
-    if (params->costas->lock > 0.011f)
+    if (lock > 0.011f)
       ++locked;
   }
+  return locked / all;
+}
 
 static float32_t interpolateLinear(float32_t *signal, uint16_t m_k,
                                    float32_t mu) {
