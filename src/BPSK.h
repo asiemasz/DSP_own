@@ -59,16 +59,10 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
                                       float32_t *outSignal,
                                       const uint16_t outLength);
 
-void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
-                           const uint16_t signalLength, uint8_t *outData,
-                           const uint16_t outLength);
-
-void BPSK_demodulateSignal_decimated(BPSK_parameters *params,
-                                     const int8_t *signal,
-                                     const uint16_t signalLength,
-                                     const uint16_t *startIdx,
-                                     const uint16_t startNum, uint8_t *outData,
-                                     const uint16_t outLength);
+void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
+                           const uint16_t signalLength,
+                           const uint16_t *startIdx, const uint16_t startNum,
+                           uint8_t *outData, const uint16_t outLength);
 
 void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
                             const uint16_t signalLength, uint16_t *startIdx,

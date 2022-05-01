@@ -104,12 +104,10 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
   }
 }
 
-void BPSK_demodulateSignal_decimated(BPSK_parameters *params,
-                                     const int8_t *signal,
-                                     const uint16_t signalLength,
-                                     const uint16_t *startIdx,
-                                     const uint16_t startNum, uint8_t *outData,
-                                     const uint16_t outLength) {
+void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
+                           const uint16_t signalLength,
+                           const uint16_t *startIdx, const uint16_t startNum,
+                           uint8_t *outData, const uint16_t outLength) {
   assert(startNum <= outLength);
 
   for (uint16_t i = 0; i < startNum; ++i) {
@@ -120,35 +118,6 @@ void BPSK_demodulateSignal_decimated(BPSK_parameters *params,
       uint8_t sym = *(signal + *(startIdx + i) + j) > 0 ? 0 : 1;
       *(outData + i) += sym << (params->frameLength - j);
     }
-  }
-}
-
-void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
-                           const uint16_t signalLength, uint8_t *outData,
-                           uint16_t outLength) {
-
-  uint16_t k = 0;
-
-  for (uint16_t i = params->samplesPerBit / 2;
-       i < signalLength - params->samplesPerBit / 2;
-       i = i + params->samplesPerBit * 8) {
-    outData[k] = 0;
-    if (i == params->samplesPerBit / 2) {
-      if (signal[i] < 0)
-        outData[k] += 1;
-      for (uint16_t j = params->samplesPerBit; j < 8 * params->samplesPerBit;
-           j = j + params->samplesPerBit) {
-        if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
-          outData[k] += (1 << (7 - j / params->samplesPerBit));
-      }
-    } else {
-      for (uint16_t j = 0; j < 8 * params->samplesPerBit;
-           j = j + params->samplesPerBit) {
-        if (signal[i + j] * signal[i + j - params->samplesPerBit] < 0)
-          outData[k] += (1 << (7 - j / params->samplesPerBit));
-      }
-    }
-    ++k;
   }
 }
 
