@@ -152,9 +152,9 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const float32_t *signal,
   }
 }
 
-void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
-                                      const uint16_t signalLength,
-                                      uint16_t *startIdx, uint16_t *foundIdx) {
+void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
+                            const uint16_t signalLength, uint16_t *startIdx,
+                            uint16_t *foundIdx) {
   uint16_t corrLength = signalLength > params->preambleCodeLength
                             ? (2 * signalLength - 1)
                             : (2 * params->preambleCodeLength - 1);

@@ -71,14 +71,8 @@ void BPSK_demodulateSignal_decimated(BPSK_parameters *params,
                                      const uint16_t startNum, uint8_t *outData,
                                      const uint16_t outLength);
 
-void BPSK_findSymbolsStarts_decimated(BPSK_parameters *params, int8_t *signal,
-                                      const uint16_t signalLength,
-                                      uint16_t *startIdx, uint16_t *foundIdx);
-
-void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
-                            const uint16_t signalLength,
-                            const float32_t *preamble,
-                            const uint16_t preambleLength, uint16_t *startIdx,
+void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
+                            const uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx);
 
 void BPSK_reset(BPSK_parameters *params);
