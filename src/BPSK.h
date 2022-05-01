@@ -16,16 +16,15 @@ typedef struct {
   float32_t period;
   float32_t f;
   float32_t error_int;
-  float32_t lock;
-  float32_t ask;
 } costasLoop_parameters;
 
 typedef struct {
   float32_t Kp;
   float32_t Ki;
-  uint8_t max_error;
-  float32_t error;
-  uint16_t curr_idx;
+  float32_t v_i;
+  float32_t last_sample;
+  float32_t mu;
+  uint16_t last_idx;
 } gardnerTimingRecovery_parameters;
 
 typedef struct {

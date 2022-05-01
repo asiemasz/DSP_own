@@ -293,8 +293,6 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
 void BPSK_reset(BPSK_parameters *params) {
   // Initialize costas loop
   params->costas->error_int = 0.0f;
-  params->costas->lock = 0.0f;
-  params->costas->ask = 0.0f;
   params->costas->period = 1000000.0f / (float32_t)params->Fc;
   params->costas->f = -(MICROSECONDS / (float32_t)params->Fs) * 2.0f * M_PI /
                       (MICROSECONDS / (float32_t)params->Fc);
@@ -302,7 +300,10 @@ void BPSK_reset(BPSK_parameters *params) {
   FIR_filter_reset(params->costas->LP_filterI);
   FIR_filter_reset(params->costas->LP_filterQ);
 
-  params->gardner->curr_idx = 0;
+  params->gardner->v_i = 0.0f;
+  params->gardner->last_sample = 0.0f;
+  params->gardner->mu = 0.0f;
+  params->gardner->last_idx = 0;
 }
 
 float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
@@ -312,7 +313,7 @@ float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
 
   float32_t a = params->costas->alpha;
   float32_t b = params->costas->beta;
-  float32_t intgralf = 1.2f * a / REF_PERIOD;
+  float32_t intgralf = 0.6f * a / REF_PERIOD;
   float32_t I, Q, S;
   float32_t S_I, S_Q;
   float32_t error;
@@ -350,7 +351,7 @@ float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
   return locked / all;
 }
 
-static float32_t interpolateLinear(float32_t *signal, uint16_t m_k,
+static float32_t interpolateLinear(const float32_t *signal, uint16_t m_k,
                                    float32_t mu) {
   if (mu < 0) {
     m_k--;
@@ -383,9 +384,25 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t W = 0.0f;
   uint8_t strobe = 0;
   float32_t cnt = 1.0f;
-  uint16_t zc_idx;
+  uint16_t zc_idx = 0;
   float32_t sample_zc;
   float32_t sample;
+
+  float32_t min_val, max_val;
+  uint16_t min_idx, max_idx;
+
+  arm_min_f32(signal, params->samplesPerBit, &min_val, &min_idx);
+  arm_max_f32(signal, params->samplesPerBit, &max_val, &max_idx);
+
+  if (min_val < 0.0f) {
+    m_k = min_idx + 1U;
+    gardner->last_sample = min_val;
+    output[k++] = min_val > 0 ? 1 : -1;
+  } else {
+    m_k = max_idx + 1U;
+    gardner->last_sample = max_val;
+    output[k++] = max_val > 0 ? 1 : -1;
+  }
 
   for (uint16_t i = m_k; i < signalLength; i++) {
     if (strobe) {
@@ -395,6 +412,8 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
       error = sample_zc * (gardner->last_sample - sample);
       gardner->last_sample = sample;
       output[k] = sample > 0 ? 1 : -1;
+      if (!k)
+        k++;
     } else {
       error = 0.0f;
     }
@@ -405,7 +424,8 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
     W = sps_invert + v;
     strobe = cnt < W;
     if (strobe) {
-      k++;
+      if (k > 0)
+        k++;
       m_k = i;
       gardner->mu = cnt / W;
     }
