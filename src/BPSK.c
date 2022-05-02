@@ -158,6 +158,9 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
     maximasCount = plusCount;
   }
 
+  if (!maximasCount) {
+    return;
+  }
   uint16_t prevStart, nextStart;
   prevStart = *(maximas);
   nextStart = prevStart;
@@ -346,8 +349,7 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
 
   assert(outputLength == symbols_num);
 
-  uint16_t k = 0; // current symbol index
-  uint16_t m_k = 0;
+  uint16_t k = 0;  // current symbol index
   float32_t v;     // PI output
   float32_t error; // Error from TED
   float32_t W = 0.0f;
