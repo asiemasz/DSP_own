@@ -254,17 +254,7 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
         params->cacheNext->symbols_buffer[i] = signal[signalLength - len + i];
       }
     } else {
-      arm_max_f32(corr + i - params->samplesPerBit, 2 * params->samplesPerBit,
-                  &maxVal, &idx);
-      if (maxVal > 0.6 * absMaxVal) {
-        *(startIdx + *foundIdx) =
-            i - signalLength - params->samplesPerBit + idx + preambleLength;
-        i += idx - params->samplesPerBit + preambleLength + params->frameLength;
-        ++(*foundIdx);
-      } else {
-        locked = false;
-        i += params->samplesPerBit;
-      }
+      params->cacheNext->symbols_left = 0;
     }
   }
 }
