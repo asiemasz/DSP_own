@@ -28,6 +28,11 @@ typedef struct {
 } gardnerTimingRecovery_parameters;
 
 typedef struct {
+  int8_t *symbols_buffer;
+  uint16_t symbols_left;
+} BPSK_dataCache;
+
+typedef struct {
   uint16_t Fc; // carrier frequency
   uint32_t Fs; // sampling frequency
   uint16_t Fb; // bit rate (bps)
@@ -40,6 +45,8 @@ typedef struct {
   gardnerTimingRecovery_parameters *gardner;
   int8_t *preambleCode;
   uint16_t preambleCodeLength;
+  BPSK_dataCache *cachePrev;
+  BPSK_dataCache *cacheNext;
 } BPSK_parameters;
 
 void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
@@ -62,7 +69,7 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
 void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
                            const uint16_t signalLength,
                            const uint16_t *startIdx, const uint16_t startNum,
-                           uint8_t *outData, const uint16_t outLength);
+                           uint8_t *outData, uint16_t *outLength);
 
 void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
                             const uint16_t signalLength, uint16_t *startIdx,

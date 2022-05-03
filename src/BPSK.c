@@ -107,16 +107,32 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
 void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
                            const uint16_t signalLength,
                            const uint16_t *startIdx, const uint16_t startNum,
-                           uint8_t *outData, const uint16_t outLength) {
-  assert(startNum <= outLength);
+                           uint8_t *outData, uint16_t *outLength) {
+  assert(startNum <= *outLength);
+  uint8_t k = 0;
+
+  if (params->cachePrev && params->cachePrev->symbols_left) {
+    *outLength++;
+    k++;
+    for (uint16_t j = 0; j < params->cachePrev->symbols_left; j++) {
+      params->cachePrev->symbols_buffer[params->frameLength -
+                                        params->cachePrev->symbols_left + j] =
+          signal[j];
+    }
+
+    *(outData) = 0;
+    for (uint16_t j = 1; j <= params->frameLength; j++) {
+      *(outData) += params->cachePrev->symbols_buffer[j - 1] > 0
+                        ? 0
+                        : 1 << (params->frameLength - j);
+    }
+  }
 
   for (uint16_t i = 0; i < startNum; ++i) {
-    *(outData + i) = 0;
-    if ((*startIdx + i) > signalLength - params->frameLength)
-      break;
+    *(outData + i + k) = 0;
     for (uint16_t j = 1; j <= params->frameLength; ++j) {
       uint8_t sym = *(signal + *(startIdx + i) + j) > 0 ? 0 : 1;
-      *(outData + i) += sym << (params->frameLength - j);
+      *(outData + i + k) += sym << (params->frameLength - j);
     }
   }
 }
@@ -124,6 +140,15 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
 void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
                             const uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx) {
+
+  if (params->cacheNext && params->cacheNext->symbols_left) {
+    for (uint8_t i = 0; i < params->frameLength; i++) {
+      params->cachePrev->symbols_buffer[i] =
+          params->cacheNext->symbols_buffer[i];
+    }
+  }
+  params->cachePrev->symbols_left = params->cacheNext->symbols_left;
+
   uint16_t corrLength = signalLength > params->preambleCodeLength
                             ? (2 * signalLength - 1)
                             : (2 * params->preambleCodeLength - 1);
@@ -164,18 +189,6 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
   uint16_t prevStart, nextStart;
   prevStart = *(maximas);
   nextStart = prevStart;
-  if (prevStart >= 13U - params->preambleCodeLength) {
-    uint16_t num = prevStart / 13U;
-    if (num == 0)
-      ++num;
-    while (num) {
-      nextStart -= 13U;
-      *(startIdx + *foundIdx + num - 1U) =
-          nextStart + params->preambleCodeLength;
-      --num;
-    }
-    *(foundIdx) = *(foundIdx) + prevStart / 13U;
-  }
 
   for (uint16_t i = 1; i < maximasCount; i++) {
     nextStart = *(maximas + i);
@@ -205,46 +218,40 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
         prevStart = nextStart;
       }
     }
+    if (*foundIdx == 1) {
+      uint16_t first = *startIdx;
+      if (first >= 13U) {
+        uint16_t num = first / 13U > 0 ? first / 13U : 1;
+        *(startIdx + num) = *startIdx;
+        while (num--) {
+          first -= 13U;
+          *(startIdx + num) = first;
+          *foundIdx = *foundIdx + 1;
+        }
+      }
+    }
   }
-  nextStart = *(maximas + maximasCount - 1U);
+  uint16_t last = *(startIdx + *foundIdx - 1U);
 
-  if ((nextStart - (*(startIdx + *foundIdx - 1U) -
-                    params->preambleCodeLength)) >= (13U - 2U) &&
-      (nextStart - (*(startIdx + *foundIdx - 1U) -
-                    params->preambleCodeLength)) <= (13U + 2U)) {
-    *(startIdx + *foundIdx) = nextStart + params->preambleCodeLength;
-    *foundIdx = *foundIdx + 1U;
+  if (last + (params->frameLength + params->preambleCodeLength) <
+      signalLength) {
+    uint16_t num =
+        ((signalLength - last) / 13U > 0) ? (signalLength - last) / 13U : 1;
+    for (uint16_t i = 0; i < num; i++) {
+      *(startIdx + *foundIdx) = last + (i + 1) * 13U;
+      *foundIdx = *foundIdx + 1;
+    }
   }
-}
 
-void BPSK_findSymbolsStarts(BPSK_parameters *params, const float32_t *signal,
-                            const uint16_t signalLength,
-                            const float32_t *preamble,
-                            const uint16_t preambleLength, uint16_t *startIdx,
-                            uint16_t *foundIdx) {
-  bool locked = false; // If any symbol detected
-  float32_t corr[2 * signalLength - 1];
-  arm_correlate_f32(signal, signalLength, preamble, preambleLength, corr);
-  uint16_t i = signalLength;
-
-  float32_t absMaxVal;
-  uint8_t dumm;
-  arm_max_f32(corr + i, signalLength, &absMaxVal, &dumm);
-
-  float32_t maxVal;
-  uint16_t idx;
-
-  while (i < 2 * signalLength - 1 - params->frameLength) {
-    if (!locked) {
-      arm_max_f32(corr + i, params->frameLength + preambleLength, &maxVal,
-                  &idx);
-      if (maxVal > 0.6 * absMaxVal) {
-        *(startIdx + *foundIdx) = i - signalLength + idx + preambleLength;
-        ++(*foundIdx);
-        i += idx + preambleLength + params->frameLength;
-        locked = true;
-      } else {
-        i += params->frameLength + preambleLength;
+  if (params->cacheNext && *foundIdx > 1) {
+    uint16_t lastIdx = *(startIdx + *foundIdx - 1);
+    if (lastIdx + params->frameLength >= signalLength) {
+      *foundIdx = *foundIdx - 1;
+      params->cacheNext->symbols_left =
+          (lastIdx + params->frameLength) % (signalLength - 1);
+      uint8_t len = params->frameLength - params->cacheNext->symbols_left;
+      for (uint8_t i = 0; i < len; i++) {
+        params->cacheNext->symbols_buffer[i] = signal[signalLength - len + i];
       }
     } else {
       arm_max_f32(corr + i - params->samplesPerBit, 2 * params->samplesPerBit,
@@ -276,6 +283,9 @@ void BPSK_reset(BPSK_parameters *params) {
   params->gardner->last_sample = 0.0f;
   params->gardner->mu = 0.0f;
   params->gardner->last_idx = 0;
+
+  params->cacheNext->symbols_left = 0;
+  params->cachePrev->symbols_left = 0;
 }
 
 float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
