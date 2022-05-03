@@ -281,8 +281,12 @@ void BPSK_reset(BPSK_parameters *params) {
 
   params->gardner->v_i = 0.0f;
   params->gardner->last_sample = 0.0f;
+  params->gardner->sample = 0.0f;
+  params->gardner->sample_zc = 0.0f;
+  params->gardner->error = 0;
   params->gardner->mu = 0.0f;
-  params->gardner->last_idx = 0;
+  params->gardner->cnt = 1.0f;
+  params->gardner->strobe = 0;
 
   params->cacheNext->symbols_left = 0;
   params->cachePrev->symbols_left = 0;
@@ -363,11 +367,8 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t v;     // PI output
   float32_t error; // Error from TED
   float32_t W = 0.0f;
-  uint8_t strobe = 0;
-  float32_t cnt = 1.0f;
   uint16_t zc_idx = 0;
-  float32_t sample_zc;
-  float32_t sample;
+  uint16_t m_k;
 
   float32_t min_val, max_val;
   uint16_t min_idx, max_idx;
@@ -385,16 +386,14 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
     output[k++] = max_val > 0 ? 1 : -1;
   }
 
-  for (uint16_t i = m_k; i < signalLength; i++) {
-    if (strobe) {
-      sample = interpolateLinear(signal, m_k, gardner->mu);
-      zc_idx = m_k - midpoint_offset;
-      sample_zc = interpolateLinear(signal, zc_idx, gardner->mu);
-      error = sample_zc * (gardner->last_sample - sample);
-      gardner->last_sample = sample;
-      output[k] = sample > 0 ? 1 : -1;
-      if (!k)
-        k++;
+  for (uint16_t i = 0; i < signalLength; i++) {
+    if (params->gardner->strobe) {
+      error = gardner->error;
+      output[k++] = gardner->sample > 0 ? 1 : -1;
+#ifdef DEBUG
+      sprintf(buf, "%d %f\r\n", m_k, gardner->sample);
+      uart_sendString(&uart2, buf);
+#endif
     } else {
       error = 0.0f;
     }
@@ -403,19 +402,29 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
     v = Kp * error + gardner->v_i;
 
     W = sps_invert + v;
-    strobe = cnt < W;
-    if (strobe) {
-      if (k > 0)
-        k++;
+    params->gardner->strobe = params->gardner->cnt < W;
+    if (params->gardner->strobe) {
       m_k = i;
-      gardner->mu = cnt / W;
+      gardner->mu = params->gardner->cnt / W;
+      gardner->sample = signal[m_k] =
+          interpolateLinear(signal, m_k, gardner->mu);
+      zc_idx = m_k - midpoint_offset;
+      if (m_k - midpoint_offset > 0)
+        gardner->sample_zc = interpolateLinear(signal, zc_idx, gardner->mu);
+      gardner->error =
+          gardner->sample_zc * (gardner->last_sample - gardner->sample);
+      gardner->last_sample = gardner->sample;
     }
 
-    cnt = cnt - W;
-    if (cnt > 0) {
-      cnt = cnt - (float32_t)((int16_t)cnt);
+    gardner->cnt = gardner->cnt - W;
+    if (gardner->cnt > 0) {
+      gardner->cnt = gardner->cnt - (float32_t)((int16_t)gardner->cnt);
     } else {
-      cnt = 1.0f + cnt - (float32_t)((int16_t)cnt);
+      gardner->cnt = 1.0f + gardner->cnt - (float32_t)((int16_t)gardner->cnt);
     }
+  }
+  if (m_k + midpoint_offset < signalLength) {
+    gardner->sample_zc =
+        interpolateLinear(signal, m_k + midpoint_offset, gardner->mu);
   }
 }

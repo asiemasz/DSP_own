@@ -23,8 +23,12 @@ typedef struct {
   float32_t Ki;
   float32_t v_i;
   float32_t last_sample;
+  float32_t sample;
+  float32_t sample_zc;
   float32_t mu;
-  uint16_t last_idx;
+  float32_t error;
+  uint8_t strobe;
+  float32_t cnt;
 } gardnerTimingRecovery_parameters;
 
 typedef struct {
