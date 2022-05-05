@@ -93,13 +93,10 @@ void BPSK_getOutputSignalWithPreamble(BPSK_parameters *params,
 
     arm_conv_f32(outSignal, outLength, params->matchedFilterCoeffs,
                  params->matchedFilterCoeffsLength, tempData);
-    float32_t maxVal;
-    void *x;
-    arm_max_f32(tempData, outLength, &maxVal, x);
     k = 0;
     for (i = params->FSpan * params->samplesPerBit / 2;
          i < outLength + params->FSpan * params->samplesPerBit / 2; i++) {
-      outSignal[k++] = tempData[i] / maxVal;
+      outSignal[k++] = tempData[i];
     }
   }
 }
