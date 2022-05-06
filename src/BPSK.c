@@ -1,5 +1,4 @@
 #include "BPSK.h"
-#include "uart.h"
 
 #define MICROSECONDS 1000000.0f
 // turn bytes into -1 (corresponding to 0) and 1 (corresponding to 1) array
