@@ -4,5 +4,5 @@ file(GLOB C_SOURCES
     "src/*.c"
 )
 
-add_library(DSP_own SHARED ${C_SOURCES})
+add_library(DSP_own STATIC ${C_SOURCES})
 target_include_directories(DSP_own PUBLIC src)

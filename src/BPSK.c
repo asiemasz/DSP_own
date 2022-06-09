@@ -119,7 +119,7 @@ void BPSK_demodulateSignal(BPSK_parameters *params, const int8_t *signal,
   uint8_t k = 0;
 
   if (params->cachePrev && params->cachePrev->symbols_left) {
-    *outLength++;
+    (*outLength)++;
     k++;
     for (uint16_t j = 0; j < params->cachePrev->symbols_left; j++) {
       params->cachePrev->symbols_buffer[params->frameLength -
@@ -148,7 +148,6 @@ void BPSK_findSymbolsStarts(BPSK_parameters *params, int8_t *signal,
                             const uint16_t signalLength, uint16_t *startIdx,
                             uint16_t *foundIdx) {
 
-  static uint16_t number = 0;
   uint16_t frame_length = params->frameLength + params->preambleCodeLength;
   if (params->cacheNext && params->cacheNext->symbols_left) {
     for (uint8_t i = 0; i < params->frameLength; i++) {
@@ -311,7 +310,7 @@ float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t I, Q, S;
   float32_t S_I, S_Q;
   float32_t error;
-  float32_t lock, ask;
+  float32_t lock;
   float32_t locked = 0;
   float32_t all = 0;
 
@@ -338,7 +337,6 @@ float BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
     params->costas->period -= b * error;
 
     lock = (S_I * S_I) - (S_Q * S_Q);
-    ask = (S_I * S_I) + (S_Q * S_Q);
     ++all;
     if (lock > 0.011f)
       ++locked;
@@ -376,7 +374,7 @@ void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
   float32_t error; // Error from TED
   float32_t W = 0.0f;
   uint16_t zc_idx = 0;
-  uint16_t m_k;
+  uint16_t m_k = 0;
 
   for (uint16_t i = 0; i < signalLength; i++) {
     if (params->gardner->strobe) {

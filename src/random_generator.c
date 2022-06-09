@@ -31,5 +31,5 @@ uint32_t generateRandom() {
 }
 
 uint32_t generateRandomFromRange(uint32_t min, uint32_t max) {
-  (min + generateRandom()) % (min + max + 1);
+  return (min + generateRandom()) % (min + max + 1);
 }

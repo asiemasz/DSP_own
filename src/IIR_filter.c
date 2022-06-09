@@ -48,4 +48,5 @@ float32_t IIR_filter_run(IIR_filter *filter, float32_t *input,
   for (uint16_t i = 0; i < input_length; i++) {
     output[i] = IIR_filter_step(filter, input[i]);
   }
+  return output[input_length - 1];
 }

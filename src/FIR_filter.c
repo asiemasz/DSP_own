@@ -10,7 +10,7 @@ FIR_filter FIR_filter_init(float32_t *coeffs, uint16_t coeffs_length,
   return ret;
 }
 
-FIR_filter FIR_filter_reset(FIR_filter *filter) {
+void FIR_filter_reset(FIR_filter *filter) {
   for (uint16_t i = 0; i < filter->length; ++i) {
     filter->buf[i] = 0.0f;
   }
