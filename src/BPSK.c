@@ -1,5 +1,4 @@
 #include "BPSK.h"
-#include "uart.h"
 
 #define MICROSECONDS 1000000.0f
 
