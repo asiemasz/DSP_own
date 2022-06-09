@@ -51,6 +51,7 @@ typedef struct {
   uint16_t preambleCodeLength;
   BPSK_dataCache *cachePrev;
   BPSK_dataCache *cacheNext;
+  uint16_t nextStart;
 } BPSK_parameters;
 
 void BPSK_getModSamples(BPSK_parameters *params, const uint8_t *data,
@@ -87,6 +88,6 @@ float32_t BPSK_carrierRecovery(BPSK_parameters *params, float32_t *signal,
 
 void BPSK_timingRecovery(BPSK_parameters *params, float32_t *signal,
                          const uint16_t signalLength, int8_t *output,
-                         const uint16_t outputLength);
+                         uint16_t *outputLength);
 
 #endif
