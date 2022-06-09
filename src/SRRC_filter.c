@@ -1,5 +1,6 @@
 #include "SRRC_filter.h"
 #include <arm_math.h>
+#include <assert.h>
 
 /* Generate FIR coeffs of Square Root Raised Cosine filter
     symbolSpan - filter span in symbols,
